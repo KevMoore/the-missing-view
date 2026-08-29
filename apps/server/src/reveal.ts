@@ -67,10 +67,12 @@ export async function buildReveal(pack: CasePack, state: GameState): Promise<Rev
   };
 }
 
+const plural = (n: number, word: string) => `${String(n)} ${word}${n === 1 ? '' : 's'}`;
+
 /** Every private line cites a logged act (D10). */
 function privateEvidence(c: PlayerCounters): string[] {
   const lines: string[] = [];
-  if (c.cluesTabled) lines.push(`You put ${String(c.cluesTabled)} clues on the shared board.`);
+  if (c.cluesTabled) lines.push(`You put ${plural(c.cluesTabled, 'clue')} on the shared board.`);
   if (c.earlyTables)
     lines.push(
       `${String(c.earlyTables)} of them within minutes of receiving them — you share early.`,
@@ -80,11 +82,13 @@ function privateEvidence(c: PlayerCounters): string[] {
       `You asked ${String(c.questionsAsked)} questions of ${String(c.suspectsProbed)} suspects.`,
     );
   if (c.challengesRaised)
-    lines.push(`You challenged a theory ${String(c.challengesRaised)} times.`);
+    lines.push(`You challenged a theory ${plural(c.challengesRaised, 'time')}.`);
   if (c.theoriesProposed)
-    lines.push(`You proposed ${String(c.theoriesProposed)} theories of the crime.`);
+    lines.push(
+      `You proposed ${plural(c.theoriesProposed, 'theory').replace('theorys', 'theories')} of the crime.`,
+    );
   if (c.whispersSent)
-    lines.push(`You tested ideas privately ${String(c.whispersSent)} times before going public.`);
+    lines.push(`You tested ideas privately ${plural(c.whispersSent, 'time')} before going public.`);
   if (c.voteChanges)
     lines.push(
       `You changed your position ${String(c.voteChanges)} times — you let evidence move you.`,

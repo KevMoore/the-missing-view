@@ -16,7 +16,7 @@ export default tseslint.config(
     rules: { '@typescript-eslint/no-non-null-assertion': 'off' },
   },
   {
-    files: ['**/*.js'],
+    files: ['**/*.js', '**/vite.config.ts', '**/playwright.config.ts'],
     ...tseslint.configs.disableTypeChecked,
   },
 );
