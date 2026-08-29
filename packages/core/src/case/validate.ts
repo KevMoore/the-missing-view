@@ -53,7 +53,10 @@ export function validateCase(pack: CasePack): ValidationIssue[] {
 
   // Cast covers the head count.
   if (pack.characters.length < MAX_PLAYERS)
-    fail('cast-size', `need >= ${MAX_PLAYERS} player characters, have ${pack.characters.length}`);
+    fail(
+      'cast-size',
+      `need >= ${String(MAX_PLAYERS)} player characters, have ${String(pack.characters.length)}`,
+    );
 
   // Suspects are interrogable and contained.
   for (const s of pack.suspects) {
@@ -67,12 +70,25 @@ export function validateCase(pack: CasePack): ValidationIssue[] {
       const deal = dealClues(pack, n, seed, 1);
       const holders = keyHolderCount(pack, deal);
       if (holders < pack.deal.minKeyHolders)
-        fail('deal-spread', `n=${n} seed=${seed}: key clues held by ${holders} < ${pack.deal.minKeyHolders} players`);
+        fail(
+          'deal-spread',
+          `n=${String(n)} seed=${String(seed)}: key clues held by ${String(holders)} < ${String(pack.deal.minKeyHolders)} players`,
+        );
       if (deal.hands.some((h) => h.length === 0))
-        fail('deal-empty-hand', `n=${n} seed=${seed}: a player would start with no clues`);
+        fail(
+          'deal-empty-hand',
+          `n=${String(n)} seed=${String(seed)}: a player would start with no clues`,
+        );
       const proven = new Set(pack.solution.provenBy);
-      if (deal.hands.some((h) => pack.solution.provenBy.every((id) => new Set(h).has(id)) && proven.size > 0))
-        fail('deal-lone-solver', `n=${n} seed=${seed}: one player would hold the whole solution`);
+      if (
+        deal.hands.some(
+          (h) => pack.solution.provenBy.every((id) => new Set(h).has(id)) && proven.size > 0,
+        )
+      )
+        fail(
+          'deal-lone-solver',
+          `n=${String(n)} seed=${String(seed)}: one player would hold the whole solution`,
+        );
     }
   }
 

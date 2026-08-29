@@ -35,7 +35,7 @@ export function testCase(overrides: Partial<CasePack> = {}): CasePack {
     title: `Clue ${String(i + 1)}`,
     text: 'Something odd.',
     key: i < 3,
-    moment: MOMENTS[i % MOMENTS.length] as TeamMoment,
+    moment: MOMENTS[i % MOMENTS.length]!,
     act: 1,
   }));
   return {
@@ -65,10 +65,15 @@ export function testCase(overrides: Partial<CasePack> = {}): CasePack {
         title: 'The Lies',
         minutes: 20,
         opening: 'The phone line is dead.',
-        commitment: { id: 'a2', prompt: 'Your working theory?', kind: 'theory', options: [
-          { id: 't1', label: 'Money' },
-          { id: 't2', label: 'Love' },
-        ] },
+        commitment: {
+          id: 'a2',
+          prompt: 'Your working theory?',
+          kind: 'theory',
+          options: [
+            { id: 't1', label: 'Money' },
+            { id: 't2', label: 'Love' },
+          ],
+        },
       },
       {
         number: 3,

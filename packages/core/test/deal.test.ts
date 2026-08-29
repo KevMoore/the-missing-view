@@ -8,7 +8,10 @@ describe('dealClues', () => {
   it('deals every act-1 clue exactly once', () => {
     const deal = dealClues(pack, 6, 42);
     const dealt = deal.hands.flat().sort();
-    const expected = pack.clues.filter((c) => c.act === 1).map((c) => c.id).sort();
+    const expected = pack.clues
+      .filter((c) => c.act === 1)
+      .map((c) => c.id)
+      .sort();
     expect(dealt).toEqual(expected);
   });
 

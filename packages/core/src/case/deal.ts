@@ -15,14 +15,22 @@ export interface Deal {
  *
  * Later-act clues are dealt by the same routine when their act opens.
  */
-export function dealClues(pack: CasePack, playerCount: number, seed: number, act: 1 | 2 | 3 = 1): Deal {
+export function dealClues(
+  pack: CasePack,
+  playerCount: number,
+  seed: number,
+  act: 1 | 2 | 3 = 1,
+): Deal {
   const pool = pack.clues.filter((c) => c.act === act);
   const rng = mulberry32(seed + act);
   const shuffled = shuffle(pool, rng);
   // Key clues first so they spread across the most players.
   shuffled.sort((a, b) => Number(b.key) - Number(a.key));
 
+  if (playerCount < 1) throw new Error('playerCount must be at least 1');
   const hands: string[][] = Array.from({ length: playerCount }, () => []);
+  const firstHand = hands[0];
+  if (!firstHand) throw new Error('unreachable: hands is non-empty');
   const apart = new Map<string, Set<string>>();
   for (const [a, b] of pack.deal.neverSameHolder) {
     (apart.get(a) ?? apart.set(a, new Set()).get(a))?.add(b);
@@ -35,7 +43,7 @@ export function dealClues(pack: CasePack, playerCount: number, seed: number, act
       .map((hand, i) => ({ hand, i }))
       .filter(({ hand }) => !banned || !hand.some((id) => banned.has(id)))
       .sort((x, y) => x.hand.length - y.hand.length);
-    const target = candidates[0] ?? { hand: hands[0] as string[], i: 0 };
+    const target = candidates[0] ?? { hand: firstHand, i: 0 };
     target.hand.push(clue.id);
   }
   return { hands };
