@@ -67,7 +67,15 @@ export function validateCase(pack: CasePack): ValidationIssue[] {
   // Deal fairness across every legal head count (D16/D17).
   for (let n = MIN_PLAYERS; n <= MAX_PLAYERS; n++) {
     for (const seed of [1, 2, 3, 4, 5]) {
-      const deal = dealClues(pack, n, seed, 1);
+      // Hands accumulate across acts (D5/D16): judge fairness on the full game's deal.
+      const deal = {
+        hands: ([1, 2, 3] as const)
+          .map((act) => dealClues(pack, n, seed, act))
+          .reduce(
+            (acc, d) => acc.map((hand, i) => [...hand, ...(d.hands[i] ?? [])]),
+            Array.from({ length: n }, (): string[] => []),
+          ),
+      };
       const holders = keyHolderCount(pack, deal);
       if (holders < pack.deal.minKeyHolders)
         fail(
