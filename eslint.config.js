@@ -12,7 +12,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['**/test/**', '**/*.test.ts'],
+    files: ['**/test/**', '**/*.test.ts', 'e2e/**'],
     rules: { '@typescript-eslint/no-non-null-assertion': 'off' },
   },
   {

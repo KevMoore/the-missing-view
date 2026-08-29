@@ -10,7 +10,16 @@ function wsUrl(): string {
   return `${proto}://${location.host}/ws`;
 }
 
-export function useGameSocket(onMessage: (msg: ServerMessage) => void): {
+/**
+ * @param hello called on EVERY (re)connect; return a message to re-establish
+ *   this client's seat (join/room context), or null if there is nothing yet.
+ *   Without this, a dropped socket reconnects into a void — the 2026-08-29
+ *   production bug.
+ */
+export function useGameSocket(
+  onMessage: (msg: ServerMessage) => void,
+  hello?: () => ClientMessage | null,
+): {
   send: (msg: ClientMessage) => void;
   connected: boolean;
 } {
@@ -18,6 +27,8 @@ export function useGameSocket(onMessage: (msg: ServerMessage) => void): {
   const socketRef = useRef<WebSocket | null>(null);
   const handlerRef = useRef(onMessage);
   handlerRef.current = onMessage;
+  const helloRef = useRef(hello);
+  helloRef.current = hello;
   const queueRef = useRef<ClientMessage[]>([]);
 
   useEffect(() => {
@@ -29,6 +40,8 @@ export function useGameSocket(onMessage: (msg: ServerMessage) => void): {
       socket.onopen = () => {
         retry = 0;
         setConnected(true);
+        const greeting = helloRef.current?.();
+        if (greeting) socket.send(JSON.stringify(greeting));
         for (const msg of queueRef.current.splice(0)) socket.send(JSON.stringify(msg));
       };
       socket.onmessage = (event: MessageEvent<string>) => {

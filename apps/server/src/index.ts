@@ -47,6 +47,13 @@ const server = createServer((req, res) => {
       res.end(JSON.stringify({ ok: true, rooms: rooms.size }));
       return;
     }
+    // Test-only: simulate a proxy severing every WebSocket (Render does this to idle ones).
+    if (process.env.TMV_TEST && req.method === 'POST' && req.url === '/test/drop-connections') {
+      for (const socket of wss.clients) socket.terminate();
+      res.writeHead(200);
+      res.end('dropped');
+      return;
+    }
     // Static SPA serving with an index.html fallback for client routes.
     const path = normalize(req.url?.split('?')[0] ?? '/').replace(/^(\.\.[/\\])+/, '');
     const candidates = [
@@ -70,7 +77,23 @@ const server = createServer((req, res) => {
 
 const wss = new WebSocketServer({ server, path: '/ws' });
 
+// Heartbeat: keeps proxies (Render's included) from closing idle sockets,
+// and reaps connections that died without a close frame.
+const alive = new WeakSet<WebSocket>();
+setInterval(() => {
+  for (const socket of wss.clients) {
+    if (!alive.has(socket)) {
+      socket.terminate();
+      continue;
+    }
+    alive.delete(socket);
+    socket.ping();
+  }
+}, 30_000);
+
 wss.on('connection', (socket: WebSocket) => {
+  alive.add(socket);
+  socket.on('pong', () => alive.add(socket));
   let room: Room | null = null;
   let client: Client | null = null;
 

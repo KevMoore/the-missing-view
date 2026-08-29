@@ -1,6 +1,15 @@
 /** The player's phone: dossier, table/whisper, interrogate, vote, private reveal. */
-import { useEffect, useRef, useState } from 'react';
-import { useGameSocket, type PhoneView, type ServerMessage } from '../ws.js';
+import { useState } from 'react';
+import { useGameSocket, type ClientMessage, type PhoneView, type ServerMessage } from '../ws.js';
+
+/** The stored seat: enough to re-join on any (re)connect. */
+function storedJoin(): ClientMessage | null {
+  const saved = localStorage.getItem('tmv-player');
+  const name = localStorage.getItem('tmv-name');
+  if (!saved || !name) return null;
+  const { playerId, roomCode } = JSON.parse(saved) as { playerId: string; roomCode: string };
+  return { type: 'join', role: 'phone', roomCode, name, playerId };
+}
 
 type Tab = 'dossier' | 'suspects' | 'theories' | 'decide';
 
@@ -8,34 +17,28 @@ export function Phone() {
   const [view, setView] = useState<PhoneView | null>(null);
   const [error, setError] = useState('');
   const [tab, setTab] = useState<Tab>('dossier');
-  const joinedRef = useRef(false);
-
-  const { send, connected } = useGameSocket((msg: ServerMessage) => {
-    if (msg.type === 'phone-view') setView(msg);
-    else if (msg.type === 'joined') {
-      localStorage.setItem(
-        'tmv-player',
-        JSON.stringify({ playerId: msg.playerId, roomCode: msg.roomCode }),
-      );
-    } else if (msg.type === 'error') {
-      setError(msg.message);
-      setTimeout(() => {
-        setError('');
-      }, 3500);
-    }
-  });
-
-  // Auto-rejoin after a refresh or dropped connection.
-  useEffect(() => {
-    if (!connected || joinedRef.current) return;
-    const saved = localStorage.getItem('tmv-player');
-    const name = localStorage.getItem('tmv-name');
-    if (saved && name) {
-      const { playerId, roomCode } = JSON.parse(saved) as { playerId: string; roomCode: string };
-      send({ type: 'join', role: 'phone', roomCode, name, playerId });
-      joinedRef.current = true;
-    }
-  }, [connected, send]);
+  const { send, connected } = useGameSocket(
+    (msg: ServerMessage) => {
+      if (msg.type === 'phone-view') setView(msg);
+      else if (msg.type === 'joined') {
+        localStorage.setItem(
+          'tmv-player',
+          JSON.stringify({ playerId: msg.playerId, roomCode: msg.roomCode }),
+        );
+      } else if (msg.type === 'error') {
+        if (msg.message === 'no such room') {
+          // The room is gone (server restart): clear the stale seat.
+          localStorage.removeItem('tmv-player');
+          setView(null);
+        }
+        setError(msg.message);
+        setTimeout(() => {
+          setError('');
+        }, 3500);
+      }
+    },
+    storedJoin, // re-establishes the seat on every (re)connect
+  );
 
   if (!view) {
     return (
@@ -44,7 +47,6 @@ export function Phone() {
         onJoin={(code, name) => {
           localStorage.setItem('tmv-name', name);
           send({ type: 'join', role: 'phone', roomCode: code, name });
-          joinedRef.current = true;
         }}
         error={error}
       />

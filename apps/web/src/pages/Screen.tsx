@@ -5,13 +5,24 @@ import { remaining, useGameSocket, type ScreenView, type ServerMessage } from '.
 
 export function Screen() {
   const [view, setView] = useState<ScreenView | null>(null);
-  const [joined, setJoined] = useState(false);
+  const [joined, setJoined] = useState(() => Boolean(sessionStorage.getItem('tmv-screen-room')));
   const [codeInput, setCodeInput] = useState('');
   const [now, setNow] = useState(Date.now());
 
-  const { send, connected } = useGameSocket((msg: ServerMessage) => {
-    if (msg.type === 'screen-view') setView(msg);
-  });
+  const { send, connected } = useGameSocket(
+    (msg: ServerMessage) => {
+      if (msg.type === 'screen-view') setView(msg);
+      else if (msg.type === 'error' && msg.message === 'no such room') {
+        sessionStorage.removeItem('tmv-screen-room');
+        setJoined(false);
+        setView(null);
+      }
+    },
+    () => {
+      const roomCode = sessionStorage.getItem('tmv-screen-room');
+      return roomCode ? { type: 'join', role: 'screen', roomCode } : null;
+    },
+  );
 
   useEffect(() => {
     const t = setInterval(() => {
@@ -33,7 +44,9 @@ export function Screen() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              send({ type: 'join', role: 'screen', roomCode: codeInput.trim().toUpperCase() });
+              const roomCode = codeInput.trim().toUpperCase();
+              sessionStorage.setItem('tmv-screen-room', roomCode);
+              send({ type: 'join', role: 'screen', roomCode });
               setJoined(true);
             }}
           >

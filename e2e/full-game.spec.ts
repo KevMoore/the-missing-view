@@ -86,7 +86,9 @@ test('a full game of Death at Blackwood Hall', async ({ browser }) => {
   }
 
   // --- the reveal (D11 visibility rules) ---
-  await expect(screen.getByText(/But here is the interesting part/)).toBeVisible({ timeout: 15_000 });
+  await expect(screen.getByText(/But here is the interesting part/)).toBeVisible({
+    timeout: 15_000,
+  });
   // Every player gets a named strength on the shared screen.
   for (const name of PLAYERS) {
     await expect(screen.getByText(new RegExp(`${name} — The`))).toBeVisible();

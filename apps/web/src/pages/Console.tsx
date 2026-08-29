@@ -4,20 +4,36 @@ import { remaining, useGameSocket, type ConsoleView, type ServerMessage } from '
 
 export function Console() {
   const [view, setView] = useState<ConsoleView | null>(null);
-  const [roomCode, setRoomCode] = useState<string | null>(null);
+  const [roomCode, setRoomCode] = useState<string | null>(() =>
+    sessionStorage.getItem('tmv-console-room'),
+  );
   const [error, setError] = useState('');
   const [now, setNow] = useState(Date.now());
 
-  const { send, connected } = useGameSocket((msg: ServerMessage) => {
-    if (msg.type === 'console-view') setView(msg);
-    else if (msg.type === 'room-created') setRoomCode(msg.roomCode);
-    else if (msg.type === 'error') {
-      setError(msg.message);
-      setTimeout(() => {
-        setError('');
-      }, 3500);
-    }
-  });
+  const { send, connected } = useGameSocket(
+    (msg: ServerMessage) => {
+      if (msg.type === 'console-view') setView(msg);
+      else if (msg.type === 'room-created') {
+        sessionStorage.setItem('tmv-console-room', msg.roomCode);
+        setRoomCode(msg.roomCode);
+      } else if (msg.type === 'error') {
+        if (msg.message === 'no such room') {
+          // The room is gone (server restart): back to the start.
+          sessionStorage.removeItem('tmv-console-room');
+          setRoomCode(null);
+          setView(null);
+        }
+        setError(msg.message);
+        setTimeout(() => {
+          setError('');
+        }, 3500);
+      }
+    },
+    () => {
+      const stored = sessionStorage.getItem('tmv-console-room');
+      return stored ? { type: 'join', role: 'console', roomCode: stored } : null;
+    },
+  );
 
   useEffect(() => {
     const t = setInterval(() => {
