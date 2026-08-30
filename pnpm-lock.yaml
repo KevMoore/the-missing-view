@@ -97,6 +97,28 @@ importers:
         specifier: ^7.1.0
         version: 7.3.6(@types/node@24.13.3)(tsx@4.23.12)
 
+  packages/author:
+    dependencies:
+      '@tmv/core':
+        specifier: workspace:*
+        version: link:../core
+      openai:
+        specifier: ^7.8.0
+        version: 7.8.0(ws@8.21.3)
+    devDependencies:
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.13.3
+      tsx:
+        specifier: ^4.20.0
+        version: 4.23.12
+      typescript:
+        specifier: ^5.9.0
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.0
+        version: 3.2.7(@types/node@24.13.3)(tsx@4.23.12)
+
   packages/core:
     devDependencies:
       typescript:
