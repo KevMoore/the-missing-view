@@ -30,6 +30,14 @@ export function testSuspect(id: string, overrides: Partial<Suspect> = {}): Suspe
 
 /** A minimal valid case: 12 act-1 clues covering all 8 moments, 3-clue solution. */
 export function testCase(overrides: Partial<CasePack> = {}): CasePack {
+  // Three suspects, culprit s2. c1 rules out s1 and c2 rules out s3, so the
+  // pair proves it and neither does alone; c3 corroborates. `neverSameHolder`
+  // keeps c1 and c2 apart, which is what stops one player solving it unaided.
+  const proof: Partial<Clue>[] = [
+    { exonerates: ['s1'] },
+    { exonerates: ['s3'] },
+    { implicates: ['s2'] },
+  ];
   const clues: Clue[] = Array.from({ length: 12 }, (_, i) => ({
     id: `c${String(i + 1)}`,
     title: `Clue ${String(i + 1)}`,
@@ -37,6 +45,7 @@ export function testCase(overrides: Partial<CasePack> = {}): CasePack {
     key: i < 3,
     moment: MOMENTS[i % MOMENTS.length]!,
     act: 1,
+    ...(proof[i] ?? {}),
   }));
   return {
     id: 'test-case',

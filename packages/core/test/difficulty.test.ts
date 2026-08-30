@@ -78,3 +78,38 @@ describe('every player matters', () => {
           expect(pack.solution.provenBy.every((id) => hand.includes(id))).toBe(false);
   });
 });
+
+describe('the field narrows', () => {
+  const clearedBy = (act: 1 | 2 | 3) => {
+    const out = new Set<string>();
+    for (const c of pack.clues.filter((x) => x.act <= act))
+      for (const id of c.exonerates ?? []) out.add(id);
+    return out;
+  };
+
+  it('rules nobody out in act 1', () => {
+    expect([...clearedBy(1)], 'act 1 gathers; it does not eliminate').toEqual([]);
+  });
+
+  it('clears at least one suspect by the end of act 2', () => {
+    expect(clearedBy(2).size).toBeGreaterThan(0);
+  });
+
+  it('leaves only the culprit by the end of act 3', () => {
+    const left = pack.suspects.map((s) => s.id).filter((id) => !clearedBy(3).has(id));
+    expect(left).toEqual([pack.solution.culpritId]);
+  });
+
+  it('is not provable before act 3', () => {
+    const byId = new Map(pack.clues.map((c) => [c.id, c]));
+    for (const upto of [1, 2] as const) {
+      const out = new Set<string>();
+      for (const id of pack.solution.provenBy) {
+        const c = byId.get(id)!;
+        if (c.act <= upto) for (const x of c.exonerates ?? []) out.add(x);
+      }
+      const left = pack.suspects.filter((s) => !out.has(s.id));
+      expect(left.length, `provable by act ${String(upto)}`).toBeGreaterThan(1);
+    }
+  });
+});

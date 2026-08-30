@@ -1,4 +1,4 @@
-import type { CasePack, TeamMoment } from './types.js';
+import type { CasePack, Clue, TeamMoment } from './types.js';
 import { dealClues, keyHolderCount } from './deal.js';
 
 export interface ValidationIssue {
@@ -8,6 +8,9 @@ export interface ValidationIssue {
 
 export const MIN_PLAYERS = 4;
 export const MAX_PLAYERS = 8;
+
+/** Honorifics are not identifying; "Miss Cross" must still trip the spoiler rules. */
+const TITLES = new Set(['Miss', 'Lady', 'Lord', 'Mrs', 'Sir', 'Doctor', 'Captain', 'Count']);
 
 const ALL_MOMENTS: TeamMoment[] = [
   'detail',
@@ -44,6 +47,77 @@ export function validateCase(pack: CasePack): ValidationIssue[] {
   for (const clue of pack.clues) {
     if (!clue.key && !clue.moment && !pack.solution.provenBy.includes(clue.id))
       fail('orphan-clue', `clue ${clue.id} is neither key, nor a moment, nor probative`);
+  }
+
+  // ---- Is the case actually provable? (D27) ----
+  //
+  // Every other rule here checks shape. These check that the designated proof
+  // identifies one person. A draft can satisfy everything else and still be a
+  // pile of clues that reads as damning and proves nothing, which is precisely
+  // the mistake a generated case makes.
+  const suspectIds = pack.suspects.map((s) => s.id);
+  const byId = new Map(pack.clues.map((c) => [c.id, c]));
+  const probative = pack.solution.provenBy.map((id) => byId.get(id)).filter((c) => c !== undefined);
+
+  /** Who is still standing once these clues have had their say. */
+  const survivors = (clues: readonly Clue[]): string[] => {
+    const out = new Set(suspectIds);
+    for (const c of clues) for (const id of c.exonerates ?? []) out.delete(id);
+    return [...out];
+  };
+
+  for (const c of pack.clues) {
+    for (const id of [...(c.implicates ?? []), ...(c.exonerates ?? [])])
+      if (!suspectIds.includes(id)) fail('clue-cast', `clue ${c.id} names unknown suspect ${id}`);
+    if ((c.exonerates ?? []).includes(pack.solution.culpritId))
+      fail('clue-contradiction', `clue ${c.id} exonerates the culprit`);
+    for (const id of c.implicates ?? [])
+      if ((c.exonerates ?? []).includes(id))
+        fail('clue-contradiction', `clue ${c.id} both implicates and exonerates ${id}`);
+  }
+
+  const left = survivors(probative);
+  if (left.length !== 1 || left[0] !== pack.solution.culpritId)
+    fail(
+      'solution-unique',
+      `the proof leaves ${String(left.length)} suspect(s) standing (${left.join(', ')}); it must leave exactly the culprit`,
+    );
+
+  for (const c of probative) {
+    // No single clue may hand over the answer.
+    if (survivors([c]).length <= 1)
+      fail('clue-giveaway', `clue ${c.id} identifies the culprit on its own`);
+    // And no clue may sit in the proof doing nothing.
+    if (
+      (c.exonerates ?? []).length === 0 &&
+      !(c.implicates ?? []).includes(pack.solution.culpritId)
+    )
+      fail(
+        'clue-idle',
+        `clue ${c.id} is in provenBy but neither rules anyone out nor points at the culprit`,
+      );
+  }
+
+  // ---- The opening must not answer the question either (D26) ----
+  const prologue = pack.prologue;
+  if (prologue) {
+    if (prologue.beats.length === 0) fail('prologue-empty', 'prologue has no beats');
+    const culpritName = pack.suspects.find((s) => s.id === pack.solution.culpritId)?.name ?? '';
+    const parts = culpritName.split(' ').filter((w) => w.length > 3 && !TITLES.has(w));
+    for (const [i, beat] of prologue.beats.entries()) {
+      if (!beat.text.trim()) fail('prologue-empty', `prologue beat ${String(i)} has no narration`);
+      if (parts.some((w) => beat.text.includes(w)))
+        fail('prologue-spoiler', `prologue beat ${String(i)} names the culprit`);
+    }
+  }
+
+  // ---- Act 1 sets the question; it does not answer it (D26) ----
+  {
+    const culpritName = pack.suspects.find((s) => s.id === pack.solution.culpritId)?.name ?? '';
+    const parts = culpritName.split(' ').filter((w) => w.length > 3 && !TITLES.has(w));
+    for (const c of pack.clues.filter((c) => c.act === 1))
+      if (parts.some((w) => c.text.includes(w)))
+        fail('act1-spoiler', `act 1 clue ${c.id} names the culprit`);
   }
 
   // All eight designed team moments present (D17).
@@ -96,16 +170,18 @@ export function validateCase(pack: CasePack): ValidationIssue[] {
           'deal-empty-hand',
           `n=${String(n)} seed=${String(seed)}: a player would start with no clues`,
         );
-      const proven = new Set(pack.solution.provenBy);
-      if (
-        deal.hands.some(
-          (h) => pack.solution.provenBy.every((id) => new Set(h).has(id)) && proven.size > 0,
-        )
-      )
-        fail(
-          'deal-lone-solver',
-          `n=${String(n)} seed=${String(seed)}: one player would hold the whole solution`,
-        );
+      // Not "holds every probative clue" — that is far too weak. A player who
+      // holds enough to rule out everyone but the culprit can solve it alone
+      // whether or not they hold the corroboration, and the whole game rests on
+      // nobody being able to.
+      for (const hand of deal.hands) {
+        const held = hand.map((id) => byId.get(id)).filter((c) => c !== undefined);
+        if (survivors(held).length <= 1)
+          fail(
+            'deal-lone-solver',
+            `n=${String(n)} seed=${String(seed)}: one player holds enough to name the culprit alone`,
+          );
+      }
     }
   }
 

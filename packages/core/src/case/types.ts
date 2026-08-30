@@ -213,6 +213,21 @@ export interface Clue {
   key: boolean;
   /** Which team moment this clue is designed to trigger, if any. */
   moment?: TeamMoment;
+  /**
+   * Who this clue points at. Narrative only — it is the `exonerates` list below
+   * that does the logical work.
+   */
+  implicates?: string[];
+  /**
+   * Who this clue rules out, and the reason it can be trusted to.
+   *
+   * This is what makes a case *provable* rather than merely suggestive. The
+   * validator applies every probative clue's exclusions and requires exactly
+   * one suspect to survive; without these fields a case can read as damning and
+   * prove nothing at all, which is exactly the failure an LLM-drafted case would
+   * make and every other rule would wave through.
+   */
+  exonerates?: string[];
   /** Act in which this clue is dealt (1-based). Act 1 clues arrive in the opening deal. */
   act: 1 | 2 | 3;
 }
