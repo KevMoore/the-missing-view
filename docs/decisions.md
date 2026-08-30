@@ -54,11 +54,12 @@ These decisions override the PRD wherever they differ. Divergences are marked.
 | D20 | **Server-authoritative.** All rules and all model calls server-side. Clients render state and send intents.                                                            |                                                                                                                          |
 | D21 | **Security light for the MVP**, but room codes are unguessable, dossiers are never sent to the wrong phone, and the solution never reaches a client before the reveal. |                                                                                                                          |
 | D22 | **No payments in the MVP.** Facilitator accounts created by hand; paid pilots invoiced off-platform.                                                                   | Success signal: a facilitator we have never met runs a session that lands, and books another.                            |
+| D23 | **`/` serves two audiences, told apart by the QR code's `?code=` parameter.** With a code, it is the join form alone. Without one, it is the front door: premise, join, run a game, and how it works. | A fourth route would split the story and drift. The QR must never pay for the landing page — asserted in `e2e/landing.spec.ts`. |
 
 ## Open, not yet decided
 
 - Text-vs-voice for the deferred remote mode (D1) — assumed text, unconfirmed.
-- Model choice and per-game cost ceiling.
+- Per-game cost ceiling. (Model settled: `gpt-5.6-luna` via the OpenAI Responses API, reasoning effort `none` for suspects and `low` for the reveal.)
 - Whether act-break micro-prompts ("who made you rethink?") are added to recover the quiet-contributor signal lost with D2/D8.
 - Debrief format: on-screen script, printed pack, or emailed follow-up.
-- Brand, domain, visual direction for the 1920s period treatment.
+- Domain and brand. (Visual direction settled: painted gallery-oil portraits and scenes on a 1920s art-deco treatment — see `docs/art-and-music.md`.)
