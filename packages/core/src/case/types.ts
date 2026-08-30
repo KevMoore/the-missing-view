@@ -104,10 +104,18 @@ export interface Suspect {
   /**
    * Which synthesised voice speaks this character aloud on the big screen. An
    * OpenAI speech voice — 'alloy', 'ash', 'ballad', 'coral', 'echo', 'fable',
-   * 'onyx', 'nova', 'sage', 'shimmer'. The `persona` above doubles as the
-   * delivery instruction, so the manner is authored once. Omit for silence.
+   * 'onyx', 'nova', 'sage', 'shimmer'. Omit for a silent character.
    */
   voice?: string;
+  /**
+   * How the character *sounds*, which is not the same as how they phrase things
+   * (`persona`, above, is the writing). Name the things a listener hears in the
+   * first two seconds: sex, rough age, accent and class, pace, pitch, and any
+   * habit of delivery — booming, reedy, wheedling, slurred, rude, over-eager,
+   * theatrical, deaf and shouting. Be specific and be unkind where the
+   * character earns it; a cast of five polite voices is a cast of one.
+   */
+  voiceDirection?: string;
 }
 
 /**

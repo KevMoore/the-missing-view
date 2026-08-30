@@ -40,7 +40,12 @@ export const blackwoodHall: CasePack = {
       persona:
         'Glacial politeness. Answers in complete, measured sentences. Deflects with ' +
         'etiquette. Never raises her voice; lowers it instead.',
-      voice: 'coral',
+      voice: 'sage',
+      voiceDirection:
+        'A woman of about forty. Upper-class English, Received Pronunciation, every ' +
+        'vowel paid for. Cool, slow and perfectly level — the voice of someone who has ' +
+        'never once had to raise it. Drops in pitch when annoyed rather than rising. ' +
+        'Small pauses before she answers, as though the question were slightly vulgar.',
       knowledge: {
         knows: [
           'She retired at half past ten and heard raised voices from the study around midnight — a man and a woman.',
@@ -93,7 +98,11 @@ export const blackwoodHall: CasePack = {
       persona:
         'Clipped soldier’s answers that fray under pressure. Guilt radiates off him. ' +
         'Becomes defensive when the war or money is raised.',
-      voice: 'onyx',
+      voice: 'ash',
+      voiceDirection:
+        'A man of thirty-eight, army officer class, clipped and forward-placed. Speaks ' +
+        'in short bursts with the breath held between them. Tight jaw. Under pressure ' +
+        'the pace quickens and the pitch climbs, and he swallows the ends of words.',
       knowledge: {
         knows: [
           'He quarrelled with Sir Edmund at ten o’clock — he had asked for a loan and been refused with contempt.',
@@ -146,7 +155,12 @@ export const blackwoodHall: CasePack = {
         'Composed, intelligent, quietly formidable. Answers exactly what is asked and ' +
         'not a word more. If confronted with evidence, concedes the smallest possible ground. ' +
         'Never confesses. Never admits to being on the landing.',
-      voice: 'sage',
+      voice: 'coral',
+      voiceDirection:
+        'A woman of thirty-two. Educated, warm on the surface, northern vowels almost ' +
+        'entirely trained out — they surface only when she is startled. Unhurried and ' +
+        'exact, like someone reading back a ledger. Never louder, never faster; the ' +
+        'more serious the question, the quieter and more courteous she becomes.',
       knowledge: {
         knows: [
           'She keeps the ledgers and drafted most of Sir Edmund’s correspondence.',
@@ -205,7 +219,12 @@ export const blackwoodHall: CasePack = {
       persona:
         'Bluff, genial, evasive by joviality. Protects his patients’ confidences ' +
         'like a dragon on gold, which makes him look guiltier than he is.',
-      voice: 'echo',
+      voice: 'onyx',
+      voiceDirection:
+        'A man of sixty-four, plummy and port-warmed, a good deal of chest in it. ' +
+        'Rolls into his sentences and chuckles halfway through his own. Rambles ' +
+        'affably, doubles back, loses the thread when it suits him. Genuinely fond ' +
+        'of everyone, which is how he avoids answering anything.',
       knowledge: {
         knows: [
           'He examined the body: death from the fall, around midnight; no trace of poison or violence beyond it.',
@@ -260,6 +279,11 @@ export const blackwoodHall: CasePack = {
         'Formal, unshakeable, loyal to the house itself rather than to any one member of it. ' +
         'Delivers devastating facts in a tone suitable for announcing dinner.',
       voice: 'fable',
+      voiceDirection:
+        'A man of fifty-eight, thirty years in service. Formal English, entirely level, ' +
+        'unhurried, each sentence closed and set down. Announces a bloodstain in exactly ' +
+        'the tone he would use for announcing dinner. No emphasis, no colour, no ' +
+        'hesitation — the flatness is the performance.',
       knowledge: {
         knows: [
           'He locked and bolted every outside door at eleven; all were still bolted when the alarm was raised. No one entered or left the Hall.',

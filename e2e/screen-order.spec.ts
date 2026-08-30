@@ -27,14 +27,17 @@ test('the screen leads with the newest theory, question and clue', async ({ brow
   }
   await con.getByRole('button', { name: /Start Act 1/ }).click();
 
-  // everyone tables everything they hold, so the board overflows the cap
+  // Everyone tables everything they hold, so the board fills past the two full
+  // cards. Bounded on purpose: another spec severs every socket on this server,
+  // and an open-ended click loop would spin on a re-rendering list forever.
   for (const p of phones) {
     await expect(p.getByText('Your private clues')).toBeVisible();
-    for (;;) {
+    const held = await p.getByRole('button', { name: 'Table it' }).count();
+    for (let i = 0; i < held; i++) {
       const button = p.getByRole('button', { name: 'Table it' }).first();
-      if (!(await button.isVisible().catch(() => false))) break;
-      await button.click();
-      await p.waitForTimeout(120);
+      if ((await button.count()) === 0) break;
+      await button.click({ timeout: 5000 }).catch(() => undefined);
+      await p.waitForTimeout(150);
     }
   }
 

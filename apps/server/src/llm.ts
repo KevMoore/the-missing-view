@@ -154,7 +154,15 @@ export async function speakAnswer(
         model: SPEECH_MODEL,
         voice: suspect.voice,
         input: text,
-        instructions: `You are ${suspect.name}, in an English country house in 1926. ${suspect.persona}`,
+        // voiceDirection is how they sound; persona is how they phrase things.
+        instructions: [
+          `You are ${suspect.name}, questioned in an English country house in 1926.`,
+          suspect.voiceDirection,
+          suspect.persona,
+          'Speak the line as this person. Do not narrate, announce yourself, or add words.',
+        ]
+          .filter(Boolean)
+          .join(' '),
         response_format: 'mp3',
       },
       { timeout: 20_000 },
