@@ -30,7 +30,7 @@ export function useSuspectVoices(
       audio.current = null;
       queue.current = [];
       speaking.current = false;
-      setDucked(false);
+      setDucked('suspect-voice', false);
     }
   }, [isMuted]);
 
@@ -48,11 +48,11 @@ export function useSuspectVoices(
       if (url === undefined) {
         speaking.current = false;
         audio.current = null;
-        setDucked(false);
+        setDucked('suspect-voice', false);
         return;
       }
       speaking.current = true;
-      setDucked(true);
+      setDucked('suspect-voice', true);
       const el = new Audio(url);
       audio.current = el;
       el.addEventListener('ended', next);
@@ -67,7 +67,7 @@ export function useSuspectVoices(
   useEffect(
     () => () => {
       audio.current?.pause();
-      setDucked(false);
+      setDucked('suspect-voice', false);
     },
     [],
   );

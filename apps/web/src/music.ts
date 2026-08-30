@@ -30,8 +30,17 @@ let cue: MusicCue = null;
 let tracks: Music = {};
 let track = 0;
 let muted = false;
-let ducked = false;
 let fadeTimer: number | null = null;
+
+/**
+ * Who currently wants the score held down. Keyed by owner, because there is
+ * more than one: the opening ducks for its narrator while the suspect-voice
+ * queue independently ducks for a reply. A plain boolean let whichever ran last
+ * win — and since child effects run before parent effects, the empty voice
+ * queue reliably cleared the opening's duck the instant it was set, and the
+ * narration played over an undipped score.
+ */
+const duckers = new Set<string>();
 
 /** How far the score drops while anyone is speaking on the screen. */
 const DUCK = 0.22;
@@ -55,6 +64,7 @@ function fadeTo(target: number, ms: number, done?: () => void): void {
 
 function volumeFor(which: MusicCue): number {
   if (muted || which === null) return 0;
+  const ducked = duckers.size > 0;
   const base =
     which === 'menu' ? MENU_VOLUME : which === 'prologue' ? PROLOGUE_VOLUME : IN_GAME_VOLUME;
   // The narration must sit on top of its own score, not fight it.
@@ -62,14 +72,19 @@ function volumeFor(which: MusicCue): number {
 }
 
 /**
- * Drop the score under a speaking suspect and lift it again after. The screen
- * is the room's only speaker, so without this the music competes with the very
+ * Drop the score under a speaking voice and lift it again after. The screen is
+ * the room's only speaker, so without this the music competes with the very
  * line everyone is straining to hear.
+ *
+ * `owner` names who is asking. The score lifts only once every owner has let go.
  */
-export function setDucked(next: boolean): void {
-  if (next === ducked) return;
-  ducked = next;
-  if (el && !el.paused) fadeTo(volumeFor(cue), next ? 350 : 900);
+export function setDucked(owner: string, on: boolean): void {
+  const before = duckers.size > 0;
+  if (on) duckers.add(owner);
+  else duckers.delete(owner);
+  const after = duckers.size > 0;
+  if (before === after) return;
+  if (el && !el.paused) fadeTo(volumeFor(cue), after ? 350 : 900);
 }
 
 function load(): void {
@@ -141,6 +156,11 @@ export function setCue(next: MusicCue): void {
   if (!el) {
     el = new Audio();
     el.preload = 'auto';
+    // In the document so its level can be read — by a test, and by anyone
+    // debugging a mix in a venue five minutes before a session.
+    el.dataset.role = 'score';
+    el.hidden = true;
+    document.body.appendChild(el);
     el.addEventListener('ended', onEnded);
     load();
     return;
@@ -162,8 +182,10 @@ export function stopMusic(): void {
   if (el) {
     el.removeEventListener('ended', onEnded);
     el.pause();
+    el.remove();
     el = null;
   }
+  duckers.clear();
   cue = null;
   track = 0;
 }

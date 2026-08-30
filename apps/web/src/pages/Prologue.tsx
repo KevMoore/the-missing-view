@@ -56,9 +56,9 @@ export function Prologue({
   end.current = onEnd;
 
   useEffect(() => {
-    setDucked(true);
+    setDucked('prologue', true);
     return () => {
-      setDucked(false);
+      setDucked('prologue', false);
       audio.current?.pause();
       audio.current = null;
     };
