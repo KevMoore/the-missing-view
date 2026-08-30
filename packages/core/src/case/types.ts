@@ -101,6 +101,13 @@ export interface Suspect {
   answerBank: BankedAnswer[];
   /** Voice/manner notes for the LLM: diction, class, tics. Never facts. */
   persona: string;
+  /**
+   * Which synthesised voice speaks this character aloud on the big screen. An
+   * OpenAI speech voice — 'alloy', 'ash', 'ballad', 'coral', 'echo', 'fable',
+   * 'onyx', 'nova', 'sage', 'shimmer'. The `persona` above doubles as the
+   * delivery instruction, so the manner is authored once. Omit for silence.
+   */
+  voice?: string;
 }
 
 /**

@@ -63,6 +63,26 @@ const server = createServer((req, res) => {
       );
       return;
     }
+    // A suspect's reply, spoken. Held in memory by the room that made it, so it
+    // dies with the game and never reaches disk.
+    const voice = /^\/voice\/([0-9A-F]{6})\/([\w-]+)\.mp3$/.exec(req.url ?? '');
+    if (voice) {
+      const [, roomCode = '', questionId = ''] = voice;
+      const audio = rooms.get(roomCode)?.voice(questionId);
+      if (!audio) {
+        res.writeHead(404);
+        res.end();
+        return;
+      }
+      res.writeHead(200, {
+        'content-type': 'audio/mpeg',
+        'content-length': audio.length,
+        'cache-control': 'no-store',
+      });
+      res.end(audio);
+      return;
+    }
+
     // Test-only: simulate a proxy severing every WebSocket (Render does this to idle ones).
     if (process.env.TMV_TEST && req.method === 'POST' && req.url === '/test/drop-connections') {
       for (const socket of wss.clients) socket.terminate();

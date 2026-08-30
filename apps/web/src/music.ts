@@ -22,7 +22,11 @@ let cue: MusicCue = null;
 let tracks: Music = {};
 let track = 0;
 let muted = false;
+let ducked = false;
 let fadeTimer: number | null = null;
+
+/** How far the score drops while a suspect is speaking. */
+const DUCK = 0.25;
 
 function fadeTo(target: number, ms: number, done?: () => void): void {
   const node = el;
@@ -43,7 +47,19 @@ function fadeTo(target: number, ms: number, done?: () => void): void {
 
 function volumeFor(which: MusicCue): number {
   if (muted || which === null) return 0;
-  return which === 'menu' ? MENU_VOLUME : IN_GAME_VOLUME;
+  const base = which === 'menu' ? MENU_VOLUME : IN_GAME_VOLUME;
+  return ducked ? base * DUCK : base;
+}
+
+/**
+ * Drop the score under a speaking suspect and lift it again after. The screen
+ * is the room's only speaker, so without this the music competes with the very
+ * line everyone is straining to hear.
+ */
+export function setDucked(next: boolean): void {
+  if (next === ducked) return;
+  ducked = next;
+  if (el && !el.paused) fadeTo(volumeFor(cue), next ? 350 : 900);
 }
 
 function load(): void {

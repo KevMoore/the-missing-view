@@ -1,8 +1,9 @@
 /** The big screen: join code, evidence board, suspect stage, timer, reveal. */
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import QRCode from 'qrcode';
 import { remaining, useGameSocket, type ScreenView, type ServerMessage } from '../ws.js';
 import { useMusic, type MusicCue } from '../music.js';
+import { useSuspectVoices } from '../voice.js';
 import { Backdrop } from './Backdrop.js';
 
 /**
@@ -46,6 +47,13 @@ export function Screen() {
   // The menu theme carries the lobby; play drops it under the room's talking.
   const cue: MusicCue = !joined ? null : (view?.phase ?? 'lobby') === 'lobby' ? 'menu' : 'game';
   useMusic(cue, muted, view?.music);
+
+  // The suspects speak here and nowhere else, for the same reason the score does.
+  const voiceUrls = useMemo(
+    () => (view?.questions ?? []).map((q) => q.voiceUrl).filter((u): u is string => Boolean(u)),
+    [view?.questions],
+  );
+  useSuspectVoices(voiceUrls, joined, muted);
 
   const { send, connected } = useGameSocket(
     (msg: ServerMessage) => {

@@ -15,7 +15,7 @@ import {
 } from '@tmv/core';
 import type { ConsoleView, PhoneView, ScreenView, ServerMessage } from './protocol.js';
 import { buildReveal, type RevealBundle } from './reveal.js';
-import { askSuspect } from './llm.js';
+import { askSuspect, speakAnswer } from './llm.js';
 import { BotDriver, type BotOptions } from './bots.js';
 
 export interface Client {
@@ -38,6 +38,8 @@ export class Room {
   private readonly clients = new Set<Client>();
   private reveal: RevealBundle | null = null;
   private readonly qaHistory = new Map<string, { question: string; answer: string }[]>();
+  /** Spoken replies by question id. Capped: a long game must not grow without bound. */
+  private readonly voices = new Map<string, Buffer>();
   private readonly seed = randomInt(1, 2 ** 31);
   private readonly emails: { playerId: string; email: string }[] = [];
   private readonly bots: BotDriver;
@@ -152,6 +154,25 @@ export class Room {
       fromBank,
     });
     this.pushViews();
+    // The written answer is already on the screen, so the voice is chased
+    // separately: the room reads it while the speech is still being made.
+    void this.speak(move.questionId, move.suspectId, answer);
+  }
+
+  private async speak(questionId: string, suspectId: string, answer: string): Promise<void> {
+    const audio = await speakAnswer(this.pack, suspectId, answer);
+    if (!audio) return;
+    this.voices.set(questionId, audio);
+    for (const [oldest] of this.voices) {
+      if (this.voices.size <= 20) break;
+      this.voices.delete(oldest);
+    }
+    this.pushViews();
+  }
+
+  /** The mp3 for one answer, for the HTTP route the big screen fetches. */
+  voice(questionId: string): Buffer | undefined {
+    return this.voices.get(questionId);
   }
 
   // ---- views ----
@@ -251,6 +272,7 @@ export class Room {
         ...q,
         byName: names.get(q.by) ?? q.by,
         suspectName: suspectName(q.suspectId),
+        ...(this.voices.has(q.id) ? { voiceUrl: `/voice/${this.code}/${q.id}.mp3` } : {}),
       })),
       ...(s?.phase === 'commitment'
         ? {

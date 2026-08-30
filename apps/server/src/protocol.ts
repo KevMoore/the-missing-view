@@ -54,7 +54,12 @@ export interface ScreenView {
   suspects: PublicSuspect[];
   board: (TabledClue & { title: string; text: string; byName: string })[];
   theories: (Theory & { byName: string })[];
-  questions: (SuspectQuestion & { byName: string; suspectName: string })[];
+  questions: (SuspectQuestion & {
+    byName: string;
+    suspectName: string;
+    /** Where to fetch this reply spoken aloud. Absent until the audio exists. */
+    voiceUrl?: string;
+  })[];
   commitmentPrompt?: string;
   commitmentOptions?: { id: string; label: string }[];
   accusation?: Accusation & { culpritName: string };

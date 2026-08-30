@@ -40,6 +40,7 @@ export const blackwoodHall: CasePack = {
       persona:
         'Glacial politeness. Answers in complete, measured sentences. Deflects with ' +
         'etiquette. Never raises her voice; lowers it instead.',
+      voice: 'coral',
       knowledge: {
         knows: [
           'She retired at half past ten and heard raised voices from the study around midnight — a man and a woman.',
@@ -92,6 +93,7 @@ export const blackwoodHall: CasePack = {
       persona:
         'Clipped soldier’s answers that fray under pressure. Guilt radiates off him. ' +
         'Becomes defensive when the war or money is raised.',
+      voice: 'onyx',
       knowledge: {
         knows: [
           'He quarrelled with Sir Edmund at ten o’clock — he had asked for a loan and been refused with contempt.',
@@ -144,6 +146,7 @@ export const blackwoodHall: CasePack = {
         'Composed, intelligent, quietly formidable. Answers exactly what is asked and ' +
         'not a word more. If confronted with evidence, concedes the smallest possible ground. ' +
         'Never confesses. Never admits to being on the landing.',
+      voice: 'sage',
       knowledge: {
         knows: [
           'She keeps the ledgers and drafted most of Sir Edmund’s correspondence.',
@@ -202,6 +205,7 @@ export const blackwoodHall: CasePack = {
       persona:
         'Bluff, genial, evasive by joviality. Protects his patients’ confidences ' +
         'like a dragon on gold, which makes him look guiltier than he is.',
+      voice: 'echo',
       knowledge: {
         knows: [
           'He examined the body: death from the fall, around midnight; no trace of poison or violence beyond it.',
@@ -255,6 +259,7 @@ export const blackwoodHall: CasePack = {
       persona:
         'Formal, unshakeable, loyal to the house itself rather than to any one member of it. ' +
         'Delivers devastating facts in a tone suitable for announcing dinner.',
+      voice: 'fable',
       knowledge: {
         knows: [
           'He locked and bolted every outside door at eleven; all were still bolted when the alarm was raised. No one entered or left the Hall.',

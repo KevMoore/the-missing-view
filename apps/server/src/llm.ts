@@ -13,6 +13,13 @@ import type { CasePack, PlayerCounters, Suspect } from '@tmv/core';
 const MODEL = 'gpt-5.6-luna';
 
 /**
+ * The suspects speak aloud on the big screen. Two sentences is about sixteen
+ * seconds of audio, so a busy hour of interrogation costs a few pence — but a
+ * voice is what turns a wall of text into a person in the room.
+ */
+const SPEECH_MODEL = 'gpt-4o-mini-tts';
+
+/**
  * A suspect's reply is two sentences of in-character dialogue and the whole
  * room is waiting on it, so reasoning effort buys nothing and costs seconds.
  * The reveal gets one step up: it has to phrase real counters warmly.
@@ -123,6 +130,39 @@ export async function askSuspect(
     // so a misconfigured key would otherwise go unnoticed for a whole session.
     console.warn('[llm] askSuspect fell back to the bank:', describe(err));
     return { answer: bankedAnswer(suspect, question), fromBank: true };
+  }
+}
+
+/**
+ * Speak a suspect's reply. The character's `persona` is the delivery
+ * instruction, so the manner is authored once and never drifts from the text.
+ *
+ * Returns null on any failure, and on a case that cast no voice. Audio is
+ * decoration, exactly like the music: it must never hold up or break a game
+ * that is already showing the answer in writing.
+ */
+export async function speakAnswer(
+  pack: CasePack,
+  suspectId: string,
+  text: string,
+): Promise<Buffer | null> {
+  const suspect = pack.suspects.find((s) => s.id === suspectId);
+  if (!client || !suspect?.voice || !text) return null;
+  try {
+    const speech = await client.audio.speech.create(
+      {
+        model: SPEECH_MODEL,
+        voice: suspect.voice,
+        input: text,
+        instructions: `You are ${suspect.name}, in an English country house in 1926. ${suspect.persona}`,
+        response_format: 'mp3',
+      },
+      { timeout: 20_000 },
+    );
+    return Buffer.from(await speech.arrayBuffer());
+  } catch (err) {
+    console.warn('[llm] speakAnswer produced no audio:', describe(err));
+    return null;
   }
 }
 
