@@ -157,8 +157,15 @@ export function applyFacilitator(
       );
       if (state.act === 3) return { ...state, commitments: closed, phase: 'reveal' };
       const act = (state.act + 1) as 2 | 3;
-      // Deal this act's clues on top of existing hands.
-      const deal = dealClues(pack, state.players.length, state.seed, act);
+      // Deal this act's clues on top of existing hands, and tell the deal what
+      // everyone already holds so the proof keeps spreading to new seats.
+      const deal = dealClues(
+        pack,
+        state.players.length,
+        state.seed,
+        act,
+        state.players.map((p) => p.hand),
+      );
       const players = state.players.map((p, i) => ({
         ...p,
         hand: [...p.hand, ...(deal.hands[i] ?? [])],

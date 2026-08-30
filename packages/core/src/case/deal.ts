@@ -20,11 +20,12 @@ export function dealClues(
   playerCount: number,
   seed: number,
   act: 1 | 2 | 3 = 1,
+  previous?: readonly (readonly string[])[],
 ): Deal {
   const pool = pack.clues.filter((c) => c.act === act);
   const rng = mulberry32(seed + act);
   const shuffled = shuffle(pool, rng);
-  // Key clues first so they spread across the most players.
+  // Key clues first so they are placed before the filler competes for seats.
   shuffled.sort((a, b) => Number(b.key) - Number(a.key));
 
   if (playerCount < 1) throw new Error('playerCount must be at least 1');
@@ -37,12 +38,36 @@ export function dealClues(
     (apart.get(b) ?? apart.set(b, new Set()).get(b))?.add(a);
   }
 
+  // Seat order is shuffled per act, and is the tie-break below. Without it the
+  // sort is stable on index, so the smallest hand is always the lowest-numbered
+  // one and every key clue lands on seats 0, 1, 2 — at every seed, at every head
+  // count, leaving everyone else holding nothing that bears on the answer.
+  const seats = shuffle(
+    Array.from({ length: playerCount }, (_, i) => i),
+    mulberry32(seed * 31 + act),
+  );
+  const seatRank = new Map(seats.map((seat, rank) => [seat, rank]));
+
+  const proven = new Set(pack.solution.provenBy);
+  /** Does this seat already hold something that bears on the solution? */
+  const holdsProof = (i: number): boolean =>
+    (hands[i] ?? []).some((id) => proven.has(id)) ||
+    (previous?.[i] ?? []).some((id) => proven.has(id));
+
   for (const clue of shuffled) {
     const banned = apart.get(clue.id);
     const candidates = hands
       .map((hand, i) => ({ hand, i }))
       .filter(({ hand }) => !banned || !hand.some((id) => banned.has(id)))
-      .sort((x, y) => x.hand.length - y.hand.length);
+      .sort((x, y) => {
+        // A probative clue goes to someone who has none yet, so the proof
+        // reaches as many seats as there are probative clues to give.
+        if (proven.has(clue.id)) {
+          const d = Number(holdsProof(x.i)) - Number(holdsProof(y.i));
+          if (d !== 0) return d;
+        }
+        return x.hand.length - y.hand.length || (seatRank.get(x.i) ?? 0) - (seatRank.get(y.i) ?? 0);
+      });
     const target = candidates[0] ?? { hand: firstHand, i: 0 };
     target.hand.push(clue.id);
   }

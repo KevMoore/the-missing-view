@@ -386,7 +386,11 @@ export const blackwoodHall: CasePack = {
       key: true,
       moment: 'detail',
       title: 'The Appointment Diary',
-      text: 'Sir Edmund’s desk diary, open to today. The final entry, in his own hand: “E.C. — midnight — the study. Settle it.”',
+      text:
+        'Sir Edmund’s desk diary, open to today. The final entry, in his own hand: ' +
+        '“— midnight — the study. Settle it.” Initials stood before the hour. They have been ' +
+        'scratched out, hard enough to score the page, with a pen from his own stand — which ' +
+        'means it was done in the study, after he wrote it.',
     },
     {
       id: 'c-clock',
@@ -621,7 +625,7 @@ export const blackwoodHall: CasePack = {
       'Confronted in the study at midnight and dismissed without character, she followed him onto the landing. At 12:04 she pushed him down the grand staircase, locked the study behind her with her own key, and went to bed.',
     provenBy: ['c-diary', 'c-ledger', 'c-light', 'c-typewriter', 'c-keys', 'c-photo', 'c-coat'],
     narrative:
-      'Sir Edmund had finally done what he never did: audited his own trusted secretary. The diary named her — “E.C. — midnight — settle it.” The unfinished letter shows how the interview ended: dismissal, without a character. The governess saw the study light at twelve; the door was locked, and only three keys exist. The overwritten ledger was her slow revenge; the photograph names its reason — Cross & Sons, broken by E.B., Michaelmas 1919. And the grey thread on the finial came from her travelling coat as she turned away at the top of the stairs. Captain Ashworth’s blood, guilt and silence were exactly what they appeared to be: fear. The Hall’s missing view belonged to the quietest witness in it.',
+      'Sir Edmund had finally done what he never did: audited his own trusted secretary. His diary set the appointment — “midnight — the study. Settle it.” — and the initials before the hour were scratched out afterwards, with his own pen, behind a locked door. The unfinished letter shows how the interview ended: dismissal, without a character. The governess saw the study light at twelve; the door was locked, and only three keys exist. The overwritten ledger was her slow revenge; the photograph names its reason — Cross & Sons, broken by E.B., Michaelmas 1919. And the grey thread on the finial came from her travelling coat as she turned away at the top of the stairs. Captain Ashworth’s blood, guilt and silence were exactly what they appeared to be: fear. The Hall’s missing view belonged to the quietest witness in it.',
     forbiddenFacts: [
       'Miss Cross pushed Sir Edmund down the stairs',
       'Evelyn Cross killed Sir Edmund',

@@ -67,20 +67,29 @@ export function validateCase(pack: CasePack): ValidationIssue[] {
   // Deal fairness across every legal head count (D16/D17).
   for (let n = MIN_PLAYERS; n <= MAX_PLAYERS; n++) {
     for (const seed of [1, 2, 3, 4, 5]) {
-      // Hands accumulate across acts (D5/D16): judge fairness on the full game's deal.
-      const deal = {
-        hands: ([1, 2, 3] as const)
-          .map((act) => dealClues(pack, n, seed, act))
-          .reduce(
-            (acc, d) => acc.map((hand, i) => [...hand, ...(d.hands[i] ?? [])]),
-            Array.from({ length: n }, (): string[] => []),
-          ),
-      };
+      // Hands accumulate across acts (D5/D16), and each act is told what the
+      // room already holds, so judge fairness on the full game's deal.
+      let hands: string[][] = Array.from({ length: n }, () => []);
+      for (const act of [1, 2, 3] as const) {
+        const d = dealClues(pack, n, seed, act, hands);
+        hands = hands.map((hand, i) => [...hand, ...(d.hands[i] ?? [])]);
+      }
+      const deal = { hands };
       const holders = keyHolderCount(pack, deal);
       if (holders < pack.deal.minKeyHolders)
         fail(
           'deal-spread',
           `n=${String(n)} seed=${String(seed)}: key clues held by ${String(holders)} < ${String(pack.deal.minKeyHolders)} players`,
+        );
+      // D17 as written: every player holds a fact that bears on the answer.
+      // Only as many players as there are probative clues can, so the bar is
+      // the smaller of the two — but it must be met exactly, or someone spends
+      // the whole game holding nothing but red herrings.
+      const reachable = Math.min(n, pack.solution.provenBy.length);
+      if (holders < reachable)
+        fail(
+          'deal-every-player-matters',
+          `n=${String(n)} seed=${String(seed)}: only ${String(holders)} of ${String(n)} players hold a probative clue; ${String(reachable)} could`,
         );
       if (deal.hands.some((h) => h.length === 0))
         fail(
