@@ -13,6 +13,11 @@ const pool = url
     })
   : null;
 
+/** True when a live Postgres is configured; false means finished games are lost. */
+export function dbConfigured(): boolean {
+  return pool !== null;
+}
+
 export async function initDb(): Promise<void> {
   if (!pool) return;
   await pool.query(`

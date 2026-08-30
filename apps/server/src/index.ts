@@ -10,7 +10,8 @@ import { WebSocketServer, type WebSocket } from 'ws';
 import { blackwoodHall, IllegalMove, validateCase } from '@tmv/core';
 import { Room, type Client } from './room.js';
 import type { ClientMessage, ServerMessage } from './protocol.js';
-import { initDb, saveFinishedGame } from './persist.js';
+import { dbConfigured, initDb, saveFinishedGame } from './persist.js';
+import { llmConfigured } from './llm.js';
 
 const PORT = Number(process.env.PORT ?? 3001);
 const here = fileURLToPath(new URL('.', import.meta.url));
@@ -50,7 +51,16 @@ const server = createServer((req, res) => {
   void (async () => {
     if (req.url === '/healthz') {
       res.writeHead(200, { 'content-type': 'application/json' });
-      res.end(JSON.stringify({ ok: true, rooms: rooms.size }));
+      res.end(
+        JSON.stringify({
+          ok: true,
+          rooms: rooms.size,
+          // Both degrade silently by design (D15), so report them: a game on
+          // banked answers and no persistence looks exactly like a healthy one.
+          llm: llmConfigured(),
+          db: dbConfigured(),
+        }),
+      );
       return;
     }
     // Test-only: simulate a proxy severing every WebSocket (Render does this to idle ones).
@@ -191,4 +201,8 @@ server.listen(PORT, () => {
   console.log(
     `The Missing View server on :${String(PORT)} (cases: ${[...cases.keys()].join(', ')})`,
   );
+  console.log(
+    `  llm: ${llmConfigured() ? 'live' : 'banked answers (OPENAI_API_KEY unset)'}`,
+  );
+  console.log(`  db: ${dbConfigured() ? 'postgres' : 'in-memory (DATABASE_URL unset)'}`);
 });
