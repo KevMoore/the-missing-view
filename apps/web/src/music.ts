@@ -13,8 +13,12 @@ import type { Music } from './ws.js';
 /** In-game sits under the menu theme: the room is talking over it. */
 const MENU_VOLUME = 0.55;
 const IN_GAME_VOLUME = 0.3;
-/** The opening carries the room on its own, so it sits above the lobby theme. */
-const PROLOGUE_VOLUME = 0.62;
+/**
+ * The opening is a spoken piece with a bed under it, not a music cue with words
+ * over the top. This is the level between lines; under the narrator it drops
+ * again by DUCK, and the narrator is on the same speaker.
+ */
+const PROLOGUE_VOLUME = 0.26;
 const FADE_MS = 1200;
 /** The last beat lands, then the score goes with it rather than being cut. */
 const PROLOGUE_OUT_MS = 3500;
@@ -29,8 +33,8 @@ let muted = false;
 let ducked = false;
 let fadeTimer: number | null = null;
 
-/** How far the score drops while a suspect is speaking. */
-const DUCK = 0.25;
+/** How far the score drops while anyone is speaking on the screen. */
+const DUCK = 0.22;
 
 function fadeTo(target: number, ms: number, done?: () => void): void {
   const node = el;

@@ -83,11 +83,20 @@ const server = createServer((req, res) => {
       return;
     }
 
-    // Test-only: simulate a proxy severing every WebSocket (Render does this to idle ones).
-    if (process.env.TMV_TEST && req.method === 'POST' && req.url === '/test/drop-connections') {
-      for (const socket of wss.clients) socket.terminate();
+    // Test-only: simulate a proxy severing WebSockets (Render does this to idle
+    // ones). Scoped to one room: the suite runs several games against this one
+    // server at once, and an unscoped sweep severed the others mid-play.
+    const drop = /^\/test\/drop-connections(?:\?room=([0-9A-Fa-f]{6}))?$/.exec(req.url ?? '');
+    if (process.env.TMV_TEST && req.method === 'POST' && drop) {
+      const scope = drop[1]?.toUpperCase();
+      let dropped = 0;
+      for (const socket of wss.clients) {
+        if (scope !== undefined && socketRooms.get(socket) !== scope) continue;
+        socket.terminate();
+        dropped++;
+      }
       res.writeHead(200);
-      res.end('dropped');
+      res.end(String(dropped));
       return;
     }
     // Static SPA serving with an index.html fallback for client routes.
@@ -127,6 +136,9 @@ setInterval(() => {
   }
 }, 30_000);
 
+/** Which room each socket belongs to, so the test hook can sever just one game. */
+const socketRooms = new WeakMap<WebSocket, string>();
+
 wss.on('connection', (socket: WebSocket) => {
   alive.add(socket);
   socket.on('pong', () => alive.add(socket));
@@ -153,6 +165,7 @@ wss.on('connection', (socket: WebSocket) => {
             if (!pack) throw new IllegalMove(`unknown case ${msg.caseId}`);
             room = new Room(pack, { tickMs: BOT_TICK_MS });
             rooms.set(room.code, room);
+            socketRooms.set(socket, room.code);
             client = { role: 'console', send };
             room.addClient(client);
             send({ type: 'room-created', roomCode: room.code });
@@ -163,6 +176,7 @@ wss.on('connection', (socket: WebSocket) => {
             const target = rooms.get(msg.roomCode.toUpperCase());
             if (!target) throw new IllegalMove('no such room');
             room = target;
+            socketRooms.set(socket, room.code);
             if (msg.role === 'phone') {
               const playerId = room.joinPlayer(msg.name, msg.playerId);
               client = { role: 'phone', playerId, send };

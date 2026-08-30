@@ -68,7 +68,14 @@ export interface ScreenView {
   reveal?: SharedReveal;
   /** The narrated opening, while the facilitator is playing it. */
   prologue?: {
-    beats: { text: string; sceneAsset?: string; holdMs?: number; voiceUrl?: string }[];
+    videoAsset?: string;
+    beats: {
+      text: string;
+      sceneAsset?: string;
+      videoAsset?: string;
+      holdMs?: number;
+      voiceUrl?: string;
+    }[];
   };
 }
 

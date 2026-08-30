@@ -755,3 +755,12 @@ a:hover {
     animation: none;
   }
 }
+
+/* A film for the opening, when a case ships one. The stills stay the fallback. */
+.prologue-film {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}

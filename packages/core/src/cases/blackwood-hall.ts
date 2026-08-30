@@ -220,7 +220,7 @@ export const blackwoodHall: CasePack = {
       persona:
         'Bluff, genial, evasive by joviality. Protects his patients’ confidences ' +
         'like a dragon on gold, which makes him look guiltier than he is.',
-      voice: 'onyx',
+      voice: 'ballad',
       voiceDirection:
         'A man of sixty-four, plummy and port-warmed, a good deal of chest in it. ' +
         'Rolls into his sentences and chuckles halfway through his own. Rambles ' +
@@ -335,11 +335,12 @@ export const blackwoodHall: CasePack = {
    * room, the billiard room and the servants' passage appear nowhere else.
    */
   prologue: {
-    voice: 'ballad',
+    voice: 'onyx',
     voiceDirection:
-      'A man of about sixty. English, unhurried, low and grave, telling it rather than ' +
-      'performing it. Long pauses between sentences. Absolutely no relish — the facts are ' +
-      'doing the work, and he knows it.',
+      'A man of about seventy. A deep, resonant bass-baritone with real weight at the bottom ' +
+      'of it. Aristocratic English, immaculate diction, every consonant finished. Slow and ' +
+      'utterly unhurried, with long pauses between sentences and a faint, controlled relish ' +
+      'in the darker words. Never loud. The calm is what makes it frightening.',
     beats: [
       {
         sceneAsset: '/art/deco-1920s/scene/moor-road.jpg',

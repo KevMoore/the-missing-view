@@ -65,3 +65,24 @@ describe('castCharacters', () => {
     for (const id of ids) expect(DECO_1920S_CHARACTERS.some((c) => c.id === id)).toBe(true);
   });
 });
+
+describe('casting the voices', () => {
+  it('gives every suspect in the case a distinct voice', () => {
+    const voices = blackwoodHall.suspects.map((s) => s.voice).filter(Boolean);
+    expect(voices).toHaveLength(blackwoodHall.suspects.length);
+    expect(new Set(voices).size).toBe(voices.length);
+  });
+
+  it('never lets the narrator share a voice with someone in the room', () => {
+    const narrator = blackwoodHall.prologue?.voice;
+    expect(narrator).toBeTruthy();
+    expect(blackwoodHall.suspects.map((s) => s.voice)).not.toContain(narrator);
+  });
+
+  it('directs every suspect voice, so no two sound like the same person', () => {
+    for (const s of blackwoodHall.suspects) {
+      expect(s.voiceDirection, s.name).toBeTruthy();
+      expect(s.voiceDirection, s.name).not.toBe(s.persona);
+    }
+  });
+});

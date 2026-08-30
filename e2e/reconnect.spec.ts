@@ -30,7 +30,7 @@ test('console, screen and phone all resume after a dropped connection', async ({
   await expect(facilitator.getByText('Ana')).toBeVisible();
 
   // --- the proxy severs EVERY socket (what Render does to idle connections) ---
-  await facilitator.request.post('/test/drop-connections');
+  await facilitator.request.post(`/test/drop-connections?room=${code}`);
   await facilitator.waitForTimeout(1200);
 
   // A second player joins AFTER the drop: the reconnected console must see them.
@@ -45,7 +45,7 @@ test('console, screen and phone all resume after a dropped connection', async ({
   await expect(facilitator.getByText('Ana')).toBeVisible();
 
   // --- everything severed again; the screen must come back showing the lobby ---
-  await facilitator.request.post('/test/drop-connections');
+  await facilitator.request.post(`/test/drop-connections?room=${code}`);
   await expect(screen.getByText('Ana · Ben')).toBeVisible({ timeout: 15_000 });
 
   // --- two more join, game starts, then the PHONE drops mid-act ---
@@ -61,7 +61,7 @@ test('console, screen and phone all resume after a dropped connection', async ({
   await expect(phone.getByText('Your private clues')).toBeVisible();
   const handBefore = await phone.locator('.card h3').allTextContents();
 
-  await facilitator.request.post('/test/drop-connections');
+  await facilitator.request.post(`/test/drop-connections?room=${code}`);
   await phone.waitForTimeout(1200);
 
   // Same seat, same hand — and still able to act.

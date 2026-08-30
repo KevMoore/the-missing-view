@@ -305,6 +305,9 @@ export class Room {
       ...(this.prologuePlaying && this.pack.prologue
         ? {
             prologue: {
+              ...(this.pack.prologue.videoAsset
+                ? { videoAsset: this.pack.prologue.videoAsset }
+                : {}),
               beats: this.pack.prologue.beats.map((b, i) => ({
                 ...b,
                 ...(this.voices.has(`prologue-${String(i)}`)

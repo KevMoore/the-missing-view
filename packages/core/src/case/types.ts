@@ -54,12 +54,23 @@ export interface PrologueBeat {
   text: string;
   /** The scene behind it. Falls back to holding the previous one. */
   sceneAsset?: string;
+  /**
+   * A film for this beat, played instead of the still. The still stays the
+   * fallback: a missing file, a codec the venue laptop will not decode, or a
+   * refused autoplay drops back to the painting rather than to a black screen.
+   */
+  videoAsset?: string;
   /** How long to hold this beat when there is no narration audio, in ms. */
   holdMs?: number;
 }
 
 /** The narrated opening a facilitator may play before Act 1. */
 export interface Prologue {
+  /**
+   * One film for the whole opening, played under every beat's narration and
+   * caption. Per-beat `videoAsset` wins over this. Falls back to the stills.
+   */
+  videoAsset?: string;
   /** Which synthesised voice narrates — never one of the suspects'. */
   voice?: string;
   /** How the narrator sounds, in the same terms as `Suspect.voiceDirection`. */

@@ -153,6 +153,7 @@ export function Screen() {
     return (
       <Prologue
         beats={view.prologue.beats}
+        videoAsset={view.prologue.videoAsset}
         onEnd={() => {
           send({ type: 'prologue', playing: false });
         }}
