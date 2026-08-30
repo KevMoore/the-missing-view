@@ -5,6 +5,37 @@ import { remaining, useGameSocket, type ScreenView, type ServerMessage } from '.
 import { useMusic, type MusicCue } from '../music.js';
 import { Backdrop } from './Backdrop.js';
 
+/**
+ * The big screen has no scrollbar and nobody in the room can reach it, so
+ * anything below the fold is simply gone. Show the newest first and cap the
+ * list at what fits: the screen's job is to make the room notice what just
+ * happened, not to hold the whole record.
+ */
+function latest<T>(items: readonly T[], count: number): T[] {
+  return items.slice(-count).reverse();
+}
+
+/** Says out loud what the cap is hiding, so the board never looks smaller than it is. */
+function Earlier({
+  total,
+  shown,
+  noun,
+  plural,
+}: {
+  total: number;
+  shown: number;
+  noun: string;
+  plural?: string;
+}) {
+  const hidden = total - shown;
+  if (hidden <= 0) return null;
+  return (
+    <p className="muted small earlier">
+      + {hidden} earlier {hidden === 1 ? noun : (plural ?? `${noun}s`)}
+    </p>
+  );
+}
+
 export function Screen() {
   const [view, setView] = useState<ScreenView | null>(null);
   const [joined, setJoined] = useState(() => Boolean(sessionStorage.getItem('tmv-screen-room')));
@@ -168,7 +199,7 @@ export function Screen() {
           {view.questions.length === 0 && (
             <p className="muted small">Ask a suspect a question from your phone.</p>
           )}
-          {view.questions.slice(-5).map((q) => (
+          {latest(view.questions, 3).map((q) => (
             <div className="qa fade-up" key={q.id}>
               <div className="q">
                 {q.byName} asks {q.suspectName}: “{q.text}”
@@ -180,31 +211,48 @@ export function Screen() {
               )}
             </div>
           ))}
+          <Earlier total={view.questions.length} shown={3} noun="question" />
         </section>
 
         <section>
+          {view.theories.length > 0 && (
+            <>
+              <div className="deco-rule">Theories</div>
+              {latest(view.theories, 3).map((t) => (
+                <div className="card fade-up" key={t.id}>
+                  <p>
+                    “{t.text}” <span className="byline">— {t.byName}</span>
+                  </p>
+                  <div className="byline">
+                    backed by {t.backers.length} · challenged by {t.challengers.length}
+                  </div>
+                </div>
+              ))}
+              <Earlier total={view.theories.length} shown={3} noun="theory" plural="theories" />
+            </>
+          )}
           <div className="deco-rule">The evidence board</div>
           {view.board.length === 0 && (
             <p className="muted small">Nothing tabled yet. What are you all holding?</p>
           )}
-          {view.board.map((c) => (
-            <div className="card fade-up" key={c.clueId}>
-              <h3>{c.title}</h3>
-              <p>{c.text}</p>
-              <div className="byline">tabled by {c.byName}</div>
-            </div>
-          ))}
-          {view.theories.length > 0 && <div className="deco-rule">Theories</div>}
-          {view.theories.map((t) => (
-            <div className="card" key={t.id}>
-              <p>
-                “{t.text}” <span className="byline">— {t.byName}</span>
-              </p>
-              <div className="byline">
-                backed by {t.backers.length} · challenged by {t.challengers.length}
+          {/* The two newest read in full; the rest stay on the board as titles, so the
+              team's shared record is never lost to make room for the newest thing. */}
+          <div className="board-list">
+            {latest(view.board, 2).map((c) => (
+              <div className="card fade-up" key={c.clueId}>
+                <h3>{c.title}</h3>
+                <p>{c.text}</p>
+                <div className="byline">tabled by {c.byName}</div>
               </div>
-            </div>
-          ))}
+            ))}
+            {latest(view.board.slice(0, -2), 7).map((c) => (
+              <div className="card-slim" key={c.clueId}>
+                <span className="grow">{c.title}</span>
+                <span className="byline">{c.byName}</span>
+              </div>
+            ))}
+            <Earlier total={view.board.length} shown={9} noun="clue" />
+          </div>
         </section>
       </div>
     </div>
