@@ -54,6 +54,25 @@ export function keyHolderCount(pack: CasePack, deal: Deal): number {
   return deal.hands.filter((hand) => hand.some((id) => proven.has(id))).length;
 }
 
+/**
+ * Cast the room from the character pool, reproducibly for a given seed.
+ *
+ * Assignment used to be by index, so a case with twenty characters always dealt
+ * the first five to a table of five and the rest never appeared. Shuffling on
+ * the game seed means a pool bigger than the table is worth having: the same
+ * case casts differently every session, and the same seed replays exactly.
+ */
+export function castCharacters<T>(
+  characters: readonly T[],
+  playerCount: number,
+  seed: number,
+): T[] {
+  if (characters.length === 0) return [];
+  const pool = shuffle(characters, mulberry32(seed ^ 0x9e3779b9));
+  // A pool smaller than the table repeats rather than leaving anyone uncast.
+  return Array.from({ length: playerCount }, (_, i) => pool[i % pool.length] as T);
+}
+
 function shuffle<T>(items: readonly T[], rng: () => number): T[] {
   const a = [...items];
   for (let i = a.length - 1; i > 0; i--) {

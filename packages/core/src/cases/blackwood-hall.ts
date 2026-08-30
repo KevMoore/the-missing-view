@@ -1,4 +1,5 @@
 import type { CasePack } from '../case/types.js';
+import { DECO_1920S_CHARACTERS } from '../cast/deco-1920s.js';
 
 /**
  * Case one: "Death at Blackwood Hall" — a snowbound Yorkshire country house,
@@ -323,80 +324,11 @@ export const blackwoodHall: CasePack = {
       ],
     },
   ],
-  characters: [
-    {
-      id: 'pc-inspector',
-      name: 'The Retired Inspector',
-      portraitAsset: '/art/blackwood-hall/cast/pc-inspector.jpg',
-      role: 'a former Scotland Yard man, now a neighbour',
-      briefing:
-        'You came for the pheasant. You stayed because nobody else in this house knows how a crime scene works. Old habits are waking up.',
-      botLean: 'interrogate',
-    },
-    {
-      id: 'pc-journalist',
-      name: 'The Journalist',
-      portraitAsset: '/art/blackwood-hall/cast/pc-journalist.jpg',
-      role: 'a Fleet Street correspondent, snowed in on the way to a story',
-      briefing:
-        'You smelt a story at dinner before anyone died. Now you have the story of the year — if you can untangle it before the police take it from you.',
-      botLean: 'theorise',
-    },
-    {
-      id: 'pc-heiress',
-      name: 'The American Heiress',
-      portraitAsset: '/art/blackwood-hall/cast/pc-heiress.jpg',
-      role: 'a transatlantic guest with sharp eyes and no English reverence',
-      briefing:
-        'Everyone here performs politeness like a religion. You don’t share it, which means you see what they hide behind it.',
-      botLean: 'challenge',
-    },
-    {
-      id: 'pc-solicitor',
-      name: 'The Solicitor’s Clerk',
-      portraitAsset: '/art/blackwood-hall/cast/pc-solicitor.jpg',
-      role: 'sent from London with papers for Sir Edmund to sign',
-      briefing:
-        'The papers in your case were urgent enough to send you through a snowstorm. You know more about Sir Edmund’s affairs than anyone here suspects.',
-      botLean: 'detail',
-    },
-    {
-      id: 'pc-vicar',
-      name: 'The Vicar',
-      portraitAsset: '/art/blackwood-hall/cast/pc-vicar.jpg',
-      role: 'the parish priest, dined and stranded',
-      briefing:
-        'People tell you things. They always have. Tonight, listening may matter more than it ever has from the pulpit.',
-      botLean: 'listen',
-    },
-    {
-      id: 'pc-governess',
-      name: 'The Governess',
-      portraitAsset: '/art/blackwood-hall/cast/pc-governess.jpg',
-      role: 'governess to the ward of the house',
-      briefing:
-        'The household barely notices you, which is its mistake. You notice everything, and you were awake past midnight.',
-      botLean: 'detail',
-    },
-    {
-      id: 'pc-engineer',
-      name: 'The Motoring Engineer',
-      portraitAsset: '/art/blackwood-hall/cast/pc-engineer.jpg',
-      role: 'your motorcar failed on the moor road; the Hall took you in',
-      briefing:
-        'A stranger to all of them, obliged to none of them. You measure people the way you measure machines: by what they do under load.',
-      botLean: 'challenge',
-    },
-    {
-      id: 'pc-companion',
-      name: 'The Lady’s Companion',
-      portraitAsset: '/art/blackwood-hall/cast/pc-companion.jpg',
-      role: 'companion to a dowager who has slept through everything',
-      briefing:
-        'You have spent years being agreeable in drawing rooms. You know exactly what it costs to hold a smile in place — and you can tell when someone else is paying it.',
-      botLean: 'listen',
-    },
-  ],
+  // The roles are the theme's, not this case's: PlayerCharacter carries no
+  // solution and no Blackwood-specific fact, so every case in the house shares
+  // the pool. Twenty roles to a table of four to eight is the point — the deal
+  // casts differently every session.
+  characters: DECO_1920S_CHARACTERS,
   clues: [
     // ---- Act 1: the body, the house, the first threads ----
     {

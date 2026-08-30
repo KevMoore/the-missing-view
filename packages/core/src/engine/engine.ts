@@ -1,5 +1,5 @@
 import type { CasePack } from '../case/types.js';
-import { dealClues } from '../case/deal.js';
+import { castCharacters, dealClues } from '../case/deal.js';
 import type { FacilitatorAction, GameState, Move, Player } from './types.js';
 
 export class IllegalMove extends Error {}
@@ -13,9 +13,10 @@ export function createGame(
   if (roster.length < 4 || roster.length > 8)
     throw new IllegalMove(`player count ${String(roster.length)} outside 4..8`);
   const deal = dealClues(pack, roster.length, seed, 1);
+  const cast = castCharacters(pack.characters, roster.length, seed);
   const players: Player[] = roster.map((p, i) => ({
     ...p,
-    characterId: (pack.characters[i] ?? pack.characters[0] ?? { id: 'unknown' }).id,
+    characterId: (cast[i] ?? { id: 'unknown' }).id,
     hand: deal.hands[i] ?? [],
   }));
   return {
