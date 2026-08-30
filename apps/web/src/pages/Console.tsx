@@ -9,6 +9,13 @@ export function Console() {
   );
   const [error, setError] = useState('');
   const [now, setNow] = useState(Date.now());
+  /**
+   * The PRD's primary mode is online (§13) and the build is co-located (D1).
+   * The game itself does not care — phones have always connected from anywhere
+   * — but the instructions do, and a QR code is useless down a video call.
+   */
+  const [remote, setRemote] = useState(() => localStorage.getItem('tmv-remote') === '1');
+  const [copied, setCopied] = useState(false);
 
   const { send, connected } = useGameSocket(
     (msg: ServerMessage) => {
@@ -76,6 +83,7 @@ export function Console() {
   const phase = view?.phase ?? 'lobby';
   const joinUrl = location.host;
   const screenUrl = `${location.origin}/screen`;
+  const inviteUrl = `${location.origin}/?code=${roomCode}`;
   return (
     <div className="stage" style={{ maxWidth: 760 }}>
       <header className="row mb">
@@ -98,17 +106,40 @@ export function Console() {
       {phase === 'lobby' && (
         <div className="deco-frame mb">
           <div className="deco-rule">Set the stage</div>
+          <div className="row mb" style={{ gap: '0.5rem' }}>
+            {[
+              [false, 'Everyone in one room'],
+              [true, 'Everyone on a call'],
+            ].map(([value, label]) => (
+              <button
+                key={String(label)}
+                className={remote === value ? '' : 'ghost'}
+                onClick={() => {
+                  setRemote(value as boolean);
+                  localStorage.setItem('tmv-remote', value ? '1' : '0');
+                }}
+              >
+                {label as string}
+              </button>
+            ))}
+          </div>
           <div className={`setup-step${view?.screenConnected ? ' done' : ''}`}>
             <span className="num">{view?.screenConnected ? '✓' : '1'}</span>
             <span className="what">
-              <strong>Open the big screen.</strong>
+              <strong>{remote ? 'Open the screen and share it.' : 'Open the big screen.'}</strong>
               <span className="muted small" style={{ display: 'block', lineHeight: 1.7 }}>
                 {view?.screenConnected
-                  ? 'The screen is showing the house. Everything the room looks at is there.'
-                  : 'On the TV or projector, go to '}
+                  ? remote
+                    ? 'The screen is live. Share that tab in your call — and tick “share sound”, or the room gets the music and the suspects’ voices without hearing them.'
+                    : 'The screen is showing the house. Everything the room looks at is there.'
+                  : remote
+                    ? 'Open '
+                    : 'On the TV or projector, go to '}
                 {!view?.screenConnected && <span className="url-chip">{screenUrl}</span>}
                 {!view?.screenConnected &&
-                  ' — the art, the music, the room code and the QR code all live there.'}
+                  (remote
+                    ? ' in a second tab, then share that tab in your call with sound on.'
+                    : ' — the art, the music, the room code and the QR code all live there.')}
               </span>
               {!view?.screenConnected && (
                 <button
@@ -126,13 +157,38 @@ export function Console() {
           <div className={`setup-step${(view?.players.length ?? 0) >= 4 ? ' done' : ''}`}>
             <span className="num">{(view?.players.length ?? 0) >= 4 ? '✓' : '2'}</span>
             <span className="what">
-              <strong>Sit the players down.</strong>
+              <strong>{remote ? 'Get everyone in.' : 'Sit the players down.'}</strong>
               <span className="muted small" style={{ display: 'block', lineHeight: 1.7 }}>
-                Each player scans the QR code on the big screen, or opens{' '}
-                <span className="url-chip">{joinUrl}</span> and types the room code{' '}
-                <strong style={{ color: 'var(--gold-bright)' }}>{roomCode}</strong>. Four is the
-                minimum; use “Add an AI player” to fill the table when you are testing alone.
+                {remote ? (
+                  <>Paste this into the call chat. It carries the room code with it.</>
+                ) : (
+                  <>
+                    Each player scans the QR code on the big screen, or opens{' '}
+                    <span className="url-chip">{joinUrl}</span> and types the room code{' '}
+                    <strong style={{ color: 'var(--gold-bright)' }}>{roomCode}</strong>.
+                  </>
+                )}{' '}
+                Four is the minimum; use “Add an AI player” to fill the table when you are testing
+                alone.
               </span>
+              {remote && (
+                <button
+                  className="ghost mt"
+                  onClick={() => {
+                    void navigator.clipboard.writeText(inviteUrl).then(
+                      () => {
+                        setCopied(true);
+                        setTimeout(() => {
+                          setCopied(false);
+                        }, 2500);
+                      },
+                      () => undefined,
+                    );
+                  }}
+                >
+                  {copied ? 'Copied ✓' : `Copy invite link`}
+                </button>
+              )}
             </span>
           </div>
 
