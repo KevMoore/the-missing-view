@@ -201,8 +201,6 @@ server.listen(PORT, () => {
   console.log(
     `The Missing View server on :${String(PORT)} (cases: ${[...cases.keys()].join(', ')})`,
   );
-  console.log(
-    `  llm: ${llmConfigured() ? 'live' : 'banked answers (OPENAI_API_KEY unset)'}`,
-  );
+  console.log(`  llm: ${llmConfigured() ? 'live' : 'banked answers (OPENAI_API_KEY unset)'}`);
   console.log(`  db: ${dbConfigured() ? 'postgres' : 'in-memory (DATABASE_URL unset)'}`);
 });

@@ -55,6 +55,10 @@ export function Console() {
           <p className="muted small mb">
             Death at Blackwood Hall — 4 to 8 players, three acts, about an hour.
           </p>
+          <p className="muted small mb" style={{ lineHeight: 1.7 }}>
+            You need a big screen in the room — a TV, a projector, a laptop on the table — and one
+            phone per player. This page is yours alone: you run the game, you do not play it.
+          </p>
           <button
             style={{ width: '100%' }}
             disabled={!connected}
@@ -70,6 +74,8 @@ export function Console() {
   }
 
   const phase = view?.phase ?? 'lobby';
+  const joinUrl = location.host;
+  const screenUrl = `${location.origin}/screen`;
   return (
     <div className="stage" style={{ maxWidth: 760 }}>
       <header className="row mb">
@@ -88,6 +94,68 @@ export function Console() {
           </div>
         )}
       </header>
+
+      {phase === 'lobby' && (
+        <div className="deco-frame mb">
+          <div className="deco-rule">Set the stage</div>
+          <div className={`setup-step${view?.screenConnected ? ' done' : ''}`}>
+            <span className="num">{view?.screenConnected ? '✓' : '1'}</span>
+            <span className="what">
+              <strong>Open the big screen.</strong>
+              <span className="muted small" style={{ display: 'block', lineHeight: 1.7 }}>
+                {view?.screenConnected
+                  ? 'The screen is showing the house. Everything the room looks at is there.'
+                  : 'On the TV or projector, go to '}
+                {!view?.screenConnected && <span className="url-chip">{screenUrl}</span>}
+                {!view?.screenConnected &&
+                  ' — the art, the music, the room code and the QR code all live there.'}
+              </span>
+              {!view?.screenConnected && (
+                <button
+                  className="ghost mt"
+                  onClick={() => {
+                    window.open(screenUrl, '_blank', 'noopener');
+                  }}
+                >
+                  Open the big screen ↗
+                </button>
+              )}
+            </span>
+          </div>
+
+          <div className={`setup-step${(view?.players.length ?? 0) >= 4 ? ' done' : ''}`}>
+            <span className="num">{(view?.players.length ?? 0) >= 4 ? '✓' : '2'}</span>
+            <span className="what">
+              <strong>Sit the players down.</strong>
+              <span className="muted small" style={{ display: 'block', lineHeight: 1.7 }}>
+                Each player scans the QR code on the big screen, or opens{' '}
+                <span className="url-chip">{joinUrl}</span> and types the room code{' '}
+                <strong style={{ color: 'var(--gold-bright)' }}>{roomCode}</strong>. Four is the
+                minimum; use “Add an AI player” to fill the table when you are testing alone.
+              </span>
+            </span>
+          </div>
+
+          <div className="setup-step">
+            <span className="num">3</span>
+            <span className="what">
+              <strong>Start Act 1.</strong>
+              <span className="muted small" style={{ display: 'block', lineHeight: 1.7 }}>
+                Every player is dealt a character and a private hand of clues. They table a clue to
+                make it public, question the suspects, and post theories. You close each act when
+                the room is ready. Nobody speaks to this console — read the room, not the screen.
+              </span>
+            </span>
+          </div>
+        </div>
+      )}
+
+      {phase !== 'lobby' && view && !view.screenConnected && (
+        <div className="warn-bar small">
+          The big screen is not open. The room cannot see the evidence board, the suspects, or the
+          reveal. Open <span className="url-chip">{screenUrl}</span> on the large display.
+        </div>
+      )}
 
       <div className="deco-frame mb">
         <div className="deco-rule">Run of play</div>

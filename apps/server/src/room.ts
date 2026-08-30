@@ -350,6 +350,7 @@ export class Room {
       boardCount: s?.board.length ?? 0,
       questionCount: s?.questions.length ?? 0,
       accusationMade: Boolean(s?.accusation),
+      screenConnected: [...this.clients].some((c) => c.role === 'screen'),
       ...(s?.phase === 'reveal' && this.reveal ? { teamReveal: this.reveal.teamShape } : {}),
     };
   }

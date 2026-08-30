@@ -143,7 +143,14 @@ function JoinForm({
             Step inside
           </button>
         </form>
+        <p className="muted small mt" style={{ lineHeight: 1.6 }}>
+          The room code is on the big screen. This phone is your private hand — the story plays out
+          on the screen everyone can see.
+        </p>
       </div>
+      <p className="muted small center mt" style={{ opacity: 0.7 }}>
+        Running the game? <a href="/console">Open the facilitator console</a>.
+      </p>
       {error && <div className="toast">{error}</div>}
     </div>
   );

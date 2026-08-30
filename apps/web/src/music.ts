@@ -71,9 +71,16 @@ function onEnded(): void {
   load();
 }
 
-/** The theme's tracks, from the screen view. Safe to call on every render. */
+/**
+ * The theme's tracks, from the screen view.
+ *
+ * The stage is taken before that view arrives, so the first `setCue` almost
+ * always runs with no tracks at all and loads nothing — and it never runs
+ * again, because the cue has not changed. Start the moment they turn up.
+ */
 export function setTracks(next: Music | undefined): void {
   tracks = next ?? {};
+  if (cue !== null && el && !el.src) load();
 }
 
 export function setCue(next: MusicCue): void {
@@ -118,7 +125,11 @@ export function stopMusic(): void {
 }
 
 export function useMusic(next: MusicCue, isMuted: boolean, themeMusic: Music | undefined): void {
-  setTracks(themeMusic);
+  // The view is a fresh object every push, so key on the track list itself.
+  const trackKey = `${themeMusic?.menu ?? ''}|${(themeMusic?.inGame ?? []).join(',')}`;
+  useEffect(() => {
+    setTracks(themeMusic);
+  }, [trackKey]);
   useEffect(() => {
     setCue(next);
   }, [next]);

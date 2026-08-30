@@ -95,6 +95,8 @@ export interface ConsoleView {
   boardCount: number;
   questionCount: number;
   accusationMade: boolean;
+  /** The art, the music and the QR code all live on /screen; the console nags until it is open. */
+  screenConnected: boolean;
   /** Team shape only — never per-person profiles (D11). */
   teamReveal?: TeamShapeReveal;
 }
