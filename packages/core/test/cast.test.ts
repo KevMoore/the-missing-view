@@ -86,3 +86,26 @@ describe('casting the voices', () => {
     }
   });
 });
+
+describe('perspectives at the table', () => {
+  it('never seats four people who all see it the same way', () => {
+    // The premise is that everyone sees it differently. A plain shuffle left
+    // better than one table in six with two lenses or fewer between four.
+    for (let seed = 0; seed < 400; seed++) {
+      const leans = new Set(
+        castCharacters(DECO_1920S_CHARACTERS, 4, seed).map((c) => c.botLean ?? 'detail'),
+      );
+      expect(leans.size, `seed ${String(seed)}`).toBe(4);
+    }
+  });
+
+  it('reaches every leaning once the table is big enough', () => {
+    const distinct = new Set(DECO_1920S_CHARACTERS.map((c) => c.botLean ?? 'detail')).size;
+    for (let seed = 0; seed < 200; seed++) {
+      const leans = new Set(
+        castCharacters(DECO_1920S_CHARACTERS, 8, seed).map((c) => c.botLean ?? 'detail'),
+      );
+      expect(leans.size).toBe(distinct);
+    }
+  });
+});

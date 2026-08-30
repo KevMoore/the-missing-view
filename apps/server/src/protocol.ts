@@ -127,6 +127,8 @@ export interface SharedReveal {
   narrative: string;
   /** One named strength per player, with cited evidence. Nobody is exposed. */
   strengths: { playerId: string; name: string; strength: string; line: string }[];
+  /** The team moments the room reached, credited by name. Celebratory only. */
+  moments: { moment: string; label: string; byName: string; clueTitle: string; landed: boolean }[];
 }
 
 export interface PrivateReveal {
@@ -141,6 +143,22 @@ export interface TeamShapeReveal {
   shape: string;
   missingViews: string[];
   debriefPrompts: string[];
+  /**
+   * Every authored moment and what became of it. Yours alone (D11): the room
+   * sees what it reached, you also see what it never did and what it walked past.
+   */
+  moments: {
+    moment: string;
+    label: string;
+    clueTitle: string;
+    offered: boolean;
+    landed: boolean;
+    response?: string;
+    absentNote?: string;
+    /** No `byName`, and not by oversight: see D11. Who did what is on the big
+     * screen, in front of the room. It does not also go in the facilitator's
+     * private notes. */
+  }[];
 }
 
 export type ServerMessage =

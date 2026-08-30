@@ -764,3 +764,47 @@ a:hover {
   height: 100%;
   object-fit: cover;
 }
+
+/* ---- the eight team moments ---- */
+
+.moment-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 0.7rem;
+}
+.moment {
+  border: 1px solid var(--panel-edge);
+  border-left: 3px solid var(--panel-edge);
+  padding: 0.6rem 0.8rem;
+  background: rgba(31, 26, 21, 0.5);
+}
+.moment.landed {
+  border-left-color: var(--gold);
+}
+.moment-label {
+  font-family: var(--serif);
+  color: var(--gold-bright);
+  font-size: 1.05rem;
+  margin-bottom: 0.15rem;
+}
+.moment-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.7rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--panel-edge);
+}
+.moment-row:last-of-type {
+  border-bottom: none;
+}
+.moment-dot {
+  width: 1rem;
+  flex: none;
+  color: var(--panel-edge);
+}
+.moment-dot.landed {
+  color: var(--gold);
+}
+.moment-dot.missed {
+  color: var(--blood);
+}

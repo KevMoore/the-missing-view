@@ -4,6 +4,9 @@
  * phrases the shared lines, with a deterministic fallback.
  */
 import {
+  computeMoments,
+  MOMENT_ABSENT,
+  MOMENT_LABEL,
   computeCounters,
   headlineStrength,
   type CasePack,
@@ -32,6 +35,8 @@ export interface RevealBundle {
 export async function buildReveal(pack: CasePack, state: GameState): Promise<RevealBundle> {
   const counters = computeCounters(state, pack.solution.provenBy);
   const byId = new Map(state.players.map((p) => [p.id, p]));
+  const moments = computeMoments(pack, state);
+  const playerName = (id?: string) => (id ? (byId.get(id)?.name ?? id) : '');
   const entries = counters.map((c) => ({
     counters: c,
     name: byId.get(c.playerId)?.name ?? c.playerId,
@@ -61,9 +66,31 @@ export async function buildReveal(pack: CasePack, state: GameState): Promise<Rev
       solved: state.accusation?.correct ?? false,
       narrative: pack.solution.narrative,
       strengths,
+      // The room sees only what it reached. What it missed is the facilitator's
+      // to raise, in their own words, at the right moment (D11).
+      moments: moments
+        .filter((m) => m.offered)
+        .map((m) => ({
+          moment: m.moment,
+          label: MOMENT_LABEL[m.moment],
+          byName: playerName(m.byPlayerId),
+          clueTitle: m.clueTitle,
+          landed: m.landed,
+        })),
     },
     privates,
-    teamShape: teamShape(entries.map((e) => ({ strength: e.strength, counters: e.counters }))),
+    teamShape: teamShape(
+      entries.map((e) => ({ strength: e.strength, counters: e.counters })),
+      moments.map((m) => ({
+        moment: m.moment,
+        label: MOMENT_LABEL[m.moment],
+        clueTitle: m.clueTitle,
+        offered: m.offered,
+        landed: m.landed,
+        ...(m.response ? { response: m.response } : {}),
+        ...(m.offered ? {} : { absentNote: MOMENT_ABSENT[m.moment] }),
+      })),
+    ),
   };
 }
 
@@ -107,7 +134,10 @@ function quieterSide(c: PlayerCounters): string {
   return 'You did a bit of everything. Which of these felt most like you?';
 }
 
-function teamShape(entries: { strength: Strength; counters: PlayerCounters }[]): TeamShapeReveal {
+function teamShape(
+  entries: { strength: Strength; counters: PlayerCounters }[],
+  moments: TeamShapeReveal['moments'],
+): TeamShapeReveal {
   const present = new Set(entries.map((e) => e.strength));
   const all: Strength[] = [
     'investigator',
@@ -121,15 +151,30 @@ function teamShape(entries: { strength: Strength; counters: PlayerCounters }[]):
   const totalChallenges = entries.reduce((n, e) => n + e.counters.challengesRaised, 0);
   const totalWhispers = entries.reduce((n, e) => n + e.counters.whispersSent, 0);
 
+  const never = moments.filter((m) => !m.offered);
+  const walkedPast = moments.filter((m) => m.offered && !m.landed);
+
   return {
     shape:
       `This team leaned ${[...present].map((s) => STRENGTH_LABEL[s]).join(', ')}. ` +
+      `It reached ${String(moments.length - never.length)} of the ${String(moments.length)} team moments this case was built around. ` +
       (totalChallenges < 2
         ? 'Very little open challenge — consensus came cheap.'
         : 'Theories were genuinely contested before they were adopted.') +
       (totalWhispers > entries.length ? ' A lot happened in private side-channels first.' : ''),
+    moments,
+    // The moment-by-moment story has its own panel now, so this stays what it
+    // always was: the roles nobody in the room took up.
     missingViews: missing.map((s) => `${STRENGTH_LABEL[s]}: nobody naturally took this role.`),
     debriefPrompts: [
+      ...(never.length
+        ? [
+            `We never got to ${never.map((m) => m.label.toLowerCase()).join(', or ')}. What stopped us?`,
+          ]
+        : []),
+      ...(walkedPast.length
+        ? ['Something went on the board that the room passed over. What were we doing instead?']
+        : []),
       'Who spotted something you had missed?',
       'Which contribution felt frustrating at the time but turned out to matter?',
       'Did everyone have space to contribute? Who decided that?',

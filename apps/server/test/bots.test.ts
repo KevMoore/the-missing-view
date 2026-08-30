@@ -10,8 +10,10 @@ import { BotDriver } from '../src/bots.js';
 
 /** A room with one human and three bots, started and ticked `rounds` times. */
 async function seated(rounds = 0) {
-  // No wall-clock waits in tests: bots vote as soon as they are ticked.
-  const room = new Room(blackwoodHall, { voteDelayMs: 0 });
+  // No wall-clock waits in tests: bots vote as soon as they are ticked. The
+  // seed is pinned because the cast is drawn from a pool of twenty and the
+  // draw decides how the bots behave — an unpinned table fails now and then.
+  const room = new Room(blackwoodHall, { voteDelayMs: 0, seed: 20260830 });
   const human = room.joinPlayer('Kev');
   const bots = [room.addBot(), room.addBot(), room.addBot()];
   await room.facilitate('start');

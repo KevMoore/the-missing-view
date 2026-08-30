@@ -99,8 +99,29 @@ test('a full game of Death at Blackwood Hall', async ({ browser }) => {
   // The facilitator sees team shape but no per-person profiles.
   await expect(facilitator.getByText(/Team shape/)).toBeVisible();
   await expect(facilitator.getByText('This team leaned')).toBeVisible();
-  const teamShapePanel = facilitator.locator('.deco-frame').last();
-  await expect(teamShapePanel.getByText('Ana')).toHaveCount(0);
+  // Whole words only: "Cat" is a substring of "quiet catalyst", which is a
+  // strength label rather than a person.
+  const teamShapeText = (await facilitator.locator('.deco-frame').last().textContent()) ?? '';
+  for (const name of PLAYERS)
+    expect(
+      new RegExp(`\\b${name}\\b`).test(teamShapeText),
+      `${name} appears in the facilitator's view (D11)`,
+    ).toBe(false);
+
+  // All eight moments are accounted for on the facilitator's view, each one
+  // either reached, offered and passed over, or never attempted.
+  await expect(facilitator.getByText('The eight moments')).toBeVisible();
+  await expect(facilitator.locator('.moment-row')).toHaveCount(8);
+  await expect(
+    facilitator.getByText(/never happened|moved straight past|room answered/).first(),
+  ).toBeVisible();
+
+  // The room sees the ones it reached, credited by name — the half that is
+  // celebratory. What it missed stays with the facilitator (D11).
+  await expect(screen.getByText('The moments you reached')).toBeVisible();
+  const reached = await screen.locator('.moment').count();
+  expect(reached).toBeGreaterThan(0);
+  expect(reached).toBeLessThanOrEqual(8);
 
   // Email opt-in from Ana's private read.
   await ana.getByLabel('Email address').fill('ana@example.com');

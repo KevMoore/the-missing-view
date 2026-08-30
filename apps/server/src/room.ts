@@ -44,11 +44,17 @@ export class Room {
   private prologuePlaying = false;
   /** Narration generated once per room and reused if it is played again. */
   private narrationReady = false;
-  private readonly seed = randomInt(1, 2 ** 31);
+  /**
+   * Random per room, so two games of the same case deal and cast differently.
+   * Overridable only so tests can pin a table rather than hope for one — a
+   * suite that depends on the draw is a suite that fails one run in two hundred.
+   */
+  private readonly seed: number;
   private readonly emails: { playerId: string; email: string }[] = [];
   private readonly bots: BotDriver;
 
-  constructor(pack: CasePack, botOptions: BotOptions = {}) {
+  constructor(pack: CasePack, botOptions: BotOptions & { seed?: number } = {}) {
+    this.seed = botOptions.seed ?? randomInt(1, 2 ** 31);
     this.pack = pack;
     this.code = randomBytes(3).toString('hex').toUpperCase(); // 6 hex chars, unguessable enough for a room (D21)
     this.bots = new BotDriver(this, pack, botOptions);

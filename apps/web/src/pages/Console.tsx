@@ -264,6 +264,34 @@ export function Console() {
               ))}
             </>
           )}
+          {view.teamReveal.moments.length > 0 && (
+            <>
+              <div className="deco-rule mt">The eight moments</div>
+              {view.teamReveal.moments.map((m) => (
+                <div className="moment-row" key={m.moment}>
+                  <span
+                    className={`moment-dot${m.offered ? (m.landed ? ' landed' : ' missed') : ''}`}
+                  >
+                    {m.offered ? (m.landed ? '●' : '◐') : '○'}
+                  </span>
+                  <span className="grow">
+                    <strong>{m.label}</strong>
+                    <span className="muted small" style={{ display: 'block', lineHeight: 1.6 }}>
+                      {m.offered
+                        ? m.landed
+                          ? `Opened with “${m.clueTitle}”, and the room answered with ${m.response ?? 'something'}.`
+                          : `Opened with “${m.clueTitle}” — and the room moved straight past it.`
+                        : (m.absentNote ?? 'Never happened.')}
+                    </span>
+                  </span>
+                </div>
+              ))}
+              <p className="muted small mt">
+                ● reached and answered · ◐ offered and passed over · ○ never happened
+              </p>
+            </>
+          )}
+
           <div className="deco-rule mt">Debrief prompts</div>
           {view.teamReveal.debriefPrompts.map((q) => (
             <p className="small" style={{ lineHeight: 1.8 }} key={q}>

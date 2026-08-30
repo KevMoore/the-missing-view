@@ -375,6 +375,24 @@ function Reveal({ view }: { view: ScreenView }) {
         ))}
         <p className="muted small mt">Your fuller private read is on your phone.</p>
       </div>
+      {reveal.moments.length > 0 && (
+        <div className="deco-frame mt fade-up">
+          <div className="deco-rule">The moments you reached</div>
+          <p className="muted small mb">
+            This case was built around eight of these. You got to {reveal.moments.length}.
+          </p>
+          <div className="moment-grid">
+            {reveal.moments.map((m) => (
+              <div className={`moment${m.landed ? ' landed' : ''}`} key={m.moment}>
+                <div className="moment-label">{m.label}</div>
+                <div className="byline">
+                  {m.byName}, with “{m.clueTitle}”
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

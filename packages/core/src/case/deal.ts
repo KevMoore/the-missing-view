@@ -87,15 +87,37 @@ export function keyHolderCount(pack: CasePack, deal: Deal): number {
  * the game seed means a pool bigger than the table is worth having: the same
  * case casts differently every session, and the same seed replays exactly.
  */
-export function castCharacters<T>(
+export function castCharacters<T extends { botLean?: string }>(
   characters: readonly T[],
   playerCount: number,
   seed: number,
 ): T[] {
   if (characters.length === 0) return [];
   const pool = shuffle(characters, mulberry32(seed ^ 0x9e3779b9));
-  // A pool smaller than the table repeats rather than leaving anyone uncast.
-  return Array.from({ length: playerCount }, (_, i) => pool[i % pool.length] as T);
+
+  // Spread the lenses. A shuffle alone leaves better than one table in six with
+  // two perspectives or fewer between four people, which is a poor game — the
+  // premise is that everyone sees it differently — and, when the table is bots,
+  // a dull one to playtest against. Take the shuffled order, but prefer a
+  // leaning nobody at the table has yet.
+  const cast: T[] = [];
+  const remaining = [...pool];
+  const leans = new Set<string>();
+  const leanOf = (c: T) => c.botLean ?? 'detail';
+
+  while (cast.length < playerCount) {
+    if (remaining.length === 0) {
+      // Pool smaller than the table: repeat rather than leave anyone uncast.
+      remaining.push(...pool);
+      leans.clear();
+    }
+    const fresh = remaining.findIndex((c) => !leans.has(leanOf(c)));
+    const [chosen] = remaining.splice(fresh >= 0 ? fresh : 0, 1);
+    if (chosen === undefined) break;
+    leans.add(leanOf(chosen));
+    cast.push(chosen);
+  }
+  return cast;
 }
 
 function shuffle<T>(items: readonly T[], rng: () => number): T[] {
