@@ -170,6 +170,22 @@ export function Console() {
               Start Act 1 ({String(view?.players.length ?? 0)} joined, need 4+)
             </button>
           )}
+          {phase === 'lobby' && view?.hasPrologue === true && (
+            <button
+              className="ghost"
+              disabled={!view.screenConnected}
+              title={
+                view.screenConnected
+                  ? 'Roughly seventy seconds on the big screen. Play it once the room is seated.'
+                  : 'The big screen is not open.'
+              }
+              onClick={() => {
+                send({ type: 'prologue', playing: !view.prologuePlaying });
+              }}
+            >
+              {view.prologuePlaying ? 'Stop the opening' : 'Play the opening'}
+            </button>
+          )}
           {phase === 'lobby' && (
             <button
               className="ghost"

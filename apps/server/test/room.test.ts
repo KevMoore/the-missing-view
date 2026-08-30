@@ -140,7 +140,7 @@ describe('scene art', () => {
     expect(screen.victim?.portraitAsset).toBe(blackwoodHall.victim.portraitAsset);
     expect(screen.suspects.every((s) => s.portraitAsset)).toBe(true);
     expect(last<PhoneView>(ids[0]!, 'phone-view')?.character.portraitAsset).toMatch(
-      /^\/art\/blackwood-hall\/cast\/pc-/,
+      /^\/art\/deco-1920s\/cast\/pc-/,
     );
   });
 });

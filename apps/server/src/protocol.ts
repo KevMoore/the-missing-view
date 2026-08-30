@@ -23,6 +23,7 @@ export type ClientMessage =
   | { type: 'create-room'; caseId: string }
   | { type: 'move'; move: Move }
   | { type: 'facilitator'; action: 'start' | 'open-commitment' | 'next-act' | 'trigger-reveal' }
+  | { type: 'prologue'; playing: boolean }
   | { type: 'add-bot' }
   | { type: 'email-optin'; email: string };
 
@@ -65,6 +66,10 @@ export interface ScreenView {
   accusation?: Accusation & { culpritName: string };
   /** Only present in phase 'reveal'. */
   reveal?: SharedReveal;
+  /** The narrated opening, while the facilitator is playing it. */
+  prologue?: {
+    beats: { text: string; sceneAsset?: string; holdMs?: number; voiceUrl?: string }[];
+  };
 }
 
 /** One player's private view. */
@@ -102,6 +107,10 @@ export interface ConsoleView {
   accusationMade: boolean;
   /** The art, the music and the QR code all live on /screen; the console nags until it is open. */
   screenConnected: boolean;
+  /** True while the opening sequence is on the big screen. */
+  prologuePlaying: boolean;
+  /** False when the case ships no opening, so the console hides the control. */
+  hasPrologue: boolean;
   /** Team shape only — never per-person profiles (D11). */
   teamReveal?: TeamShapeReveal;
 }

@@ -20,6 +20,8 @@ export interface CasePack {
   suspects: Suspect[];
   /** Investigator personas dealt to players; at least 8 so any head count casts fully. */
   characters: PlayerCharacter[];
+  /** Optional narrated opening, played on the big screen before Act 1. */
+  prologue?: Prologue;
   clues: Clue[];
   acts: [Act, Act, Act];
   /**
@@ -41,6 +43,30 @@ export interface CasePack {
  *   /art/<case.id>/cast/*.jpg     portraits, specific to one case
  *   /music/<theme.id>/*.mp3       the theme's music
  */
+/**
+ * One beat of the opening sequence: a painted scene, a line of narration, and
+ * nothing else. Kept short — a room that has just sat down will watch about a
+ * minute of atmosphere, and every second after that is a second they are not
+ * playing.
+ */
+export interface PrologueBeat {
+  /** Spoken aloud on the big screen, and shown beneath the scene as a caption. */
+  text: string;
+  /** The scene behind it. Falls back to holding the previous one. */
+  sceneAsset?: string;
+  /** How long to hold this beat when there is no narration audio, in ms. */
+  holdMs?: number;
+}
+
+/** The narrated opening a facilitator may play before Act 1. */
+export interface Prologue {
+  /** Which synthesised voice narrates — never one of the suspects'. */
+  voice?: string;
+  /** How the narrator sounds, in the same terms as `Suspect.voiceDirection`. */
+  voiceDirection?: string;
+  beats: PrologueBeat[];
+}
+
 export interface Theme {
   /** Stable id, and the asset folder name. */
   id: string;
@@ -57,6 +83,8 @@ export interface Theme {
 export interface Music {
   /** Loops under the lobby. */
   menu?: string;
+  /** Under the narrated opening only. Fades out as the last beat ends. */
+  prologue?: string;
   /** Played in sequence through the acts, under the room's conversation. */
   inGame?: string[];
 }

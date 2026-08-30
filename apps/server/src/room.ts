@@ -15,7 +15,7 @@ import {
 } from '@tmv/core';
 import type { ConsoleView, PhoneView, ScreenView, ServerMessage } from './protocol.js';
 import { buildReveal, type RevealBundle } from './reveal.js';
-import { askSuspect, speakAnswer } from './llm.js';
+import { askSuspect, narrate, speakAnswer } from './llm.js';
 import { BotDriver, type BotOptions } from './bots.js';
 
 export interface Client {
@@ -40,6 +40,10 @@ export class Room {
   private readonly qaHistory = new Map<string, { question: string; answer: string }[]>();
   /** Spoken replies by question id. Capped: a long game must not grow without bound. */
   private readonly voices = new Map<string, Buffer>();
+  /** True while the opening sequence is on the big screen. */
+  private prologuePlaying = false;
+  /** Narration generated once per room and reused if it is played again. */
+  private narrationReady = false;
   private readonly seed = randomInt(1, 2 ** 31);
   private readonly emails: { playerId: string; email: string }[] = [];
   private readonly bots: BotDriver;
@@ -165,9 +169,33 @@ export class Room {
     this.voices.set(questionId, audio);
     for (const [oldest] of this.voices) {
       if (this.voices.size <= 20) break;
+      // Narration is made once and may be replayed; only answers age out.
+      if (oldest.startsWith('prologue-')) continue;
       this.voices.delete(oldest);
     }
     this.pushViews();
+  }
+
+  /**
+   * Start or stop the narrated opening. The narration is made once and kept, so
+   * a facilitator who plays it twice — a latecomer, a false start — waits only
+   * the first time. The screen is handed the beats and does the rest.
+   */
+  async setPrologue(playing: boolean): Promise<void> {
+    const prologue = this.pack.prologue;
+    if (!prologue?.beats.length) return;
+    this.prologuePlaying = playing;
+    this.pushViews();
+    if (!playing || this.narrationReady) return;
+    this.narrationReady = true;
+    // Sequential, not parallel: the screen plays them in order anyway, and the
+    // first beat should start while the last is still being made.
+    for (const [i, beat] of prologue.beats.entries()) {
+      const audio = await narrate(this.pack, beat.text);
+      if (!audio) continue;
+      this.voices.set(`prologue-${String(i)}`, audio);
+      this.pushViews();
+    }
   }
 
   /** The mp3 for one answer, for the HTTP route the big screen fetches. */
@@ -274,6 +302,18 @@ export class Room {
         suspectName: suspectName(q.suspectId),
         ...(this.voices.has(q.id) ? { voiceUrl: `/voice/${this.code}/${q.id}.mp3` } : {}),
       })),
+      ...(this.prologuePlaying && this.pack.prologue
+        ? {
+            prologue: {
+              beats: this.pack.prologue.beats.map((b, i) => ({
+                ...b,
+                ...(this.voices.has(`prologue-${String(i)}`)
+                  ? { voiceUrl: `/voice/${this.code}/prologue-${String(i)}.mp3` }
+                  : {}),
+              })),
+            },
+          }
+        : {}),
       ...(s?.phase === 'commitment'
         ? {
             commitmentPrompt: act.commitment.prompt,
@@ -373,6 +413,8 @@ export class Room {
       questionCount: s?.questions.length ?? 0,
       accusationMade: Boolean(s?.accusation),
       screenConnected: [...this.clients].some((c) => c.role === 'screen'),
+      prologuePlaying: this.prologuePlaying,
+      hasPrologue: Boolean(this.pack.prologue?.beats.length),
       ...(s?.phase === 'reveal' && this.reveal ? { teamReveal: this.reveal.teamShape } : {}),
     };
   }

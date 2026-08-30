@@ -666,3 +666,92 @@ a:hover {
   font-family: var(--serif);
   color: var(--cream-dim);
 }
+
+/* ---- the narrated opening ---- */
+
+.prologue {
+  position: fixed;
+  inset: 0;
+  background: var(--ink);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  z-index: 50;
+}
+.prologue-plate {
+  position: absolute;
+  inset: -4%;
+  background-size: cover;
+  background-position: center;
+  opacity: 0;
+  transform: scale(1);
+  transition: opacity 1800ms ease-in-out;
+}
+/* The slow push. Long enough that you feel it rather than see it. */
+.prologue-plate.on {
+  opacity: 1;
+  animation: prologue-push 14s ease-out forwards;
+}
+@keyframes prologue-push {
+  from {
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+  to {
+    transform: scale(1.09) translate3d(-1.2%, -0.8%, 0);
+  }
+}
+.prologue-vignette {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 42%, transparent 30%, rgba(13, 11, 9, 0.72) 100%),
+    linear-gradient(180deg, rgba(13, 11, 9, 0.5) 0%, transparent 22%, rgba(13, 11, 9, 0.92) 100%);
+}
+.prologue-line {
+  position: relative;
+  max-width: 46rem;
+  margin: 0 0 9vh;
+  padding: 0 2rem;
+  text-align: center;
+  font-family: var(--serif);
+  font-size: clamp(1.3rem, 2.5vw, 2.1rem);
+  line-height: 1.55;
+  color: var(--cream);
+  text-shadow: 0 2px 24px rgba(0, 0, 0, 0.9);
+  animation: prologue-line-in 1400ms ease-out both;
+}
+@keyframes prologue-line-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.7rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.prologue-progress {
+  position: relative;
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 4vh;
+}
+.prologue-progress span {
+  width: 1.8rem;
+  height: 1px;
+  background: var(--panel-edge);
+  transition: background 600ms ease;
+}
+.prologue-progress span.on {
+  background: var(--gold);
+}
+@media (prefers-reduced-motion: reduce) {
+  .prologue-plate.on {
+    animation: none;
+  }
+  .prologue-line {
+    animation: none;
+  }
+}

@@ -174,6 +174,34 @@ export async function speakAnswer(
   }
 }
 
+/** One beat of the opening, in the narrator's voice. Null on any failure. */
+export async function narrate(pack: CasePack, text: string): Promise<Buffer | null> {
+  const prologue = pack.prologue;
+  if (!client || !prologue?.voice || !text) return null;
+  try {
+    const speech = await client.audio.speech.create(
+      {
+        model: SPEECH_MODEL,
+        voice: prologue.voice,
+        input: text,
+        instructions: [
+          'You are narrating the opening of a 1926 English country-house murder mystery.',
+          prologue.voiceDirection,
+          'Speak the line only. Do not announce yourself or add words.',
+        ]
+          .filter(Boolean)
+          .join(' '),
+        response_format: 'mp3',
+      },
+      { timeout: 20_000 },
+    );
+    return Buffer.from(await speech.arrayBuffer());
+  } catch (err) {
+    console.warn('[llm] narrate produced no audio:', describe(err));
+    return null;
+  }
+}
+
 /** Deterministic fallback prose so the reveal always works offline. */
 export function deterministicStrengthLine(
   name: string,

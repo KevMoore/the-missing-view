@@ -328,6 +328,54 @@ export const blackwoodHall: CasePack = {
   // solution and no Blackwood-specific fact, so every case in the house shares
   // the pool. Twenty roles to a table of four to eight is the point — the deal
   // casts differently every session.
+  /**
+   * Roughly seventy seconds. Deliberately not two minutes: a room that has just
+   * sat down will watch about a minute of atmosphere before it wants to act.
+   * It also puts the theme's unused scenes to work — the moor road, the dining
+   * room, the billiard room and the servants' passage appear nowhere else.
+   */
+  prologue: {
+    voice: 'ballad',
+    voiceDirection:
+      'A man of about sixty. English, unhurried, low and grave, telling it rather than ' +
+      'performing it. Long pauses between sentences. Absolutely no relish — the facts are ' +
+      'doing the work, and he knows it.',
+    beats: [
+      {
+        sceneAsset: '/art/deco-1920s/scene/moor-road.jpg',
+        text: 'The road over the moor closed at dusk, and the snow has not stopped since.',
+      },
+      {
+        sceneAsset: '/art/deco-1920s/scene/hall-exterior.jpg',
+        text: 'Blackwood Hall stands eleven miles from the nearest constable. Tonight it may as well be a thousand.',
+      },
+      {
+        sceneAsset: '/art/deco-1920s/scene/dining-room.jpg',
+        text: 'Eleven people sat down to dinner. Sir Edmund Blackwood — industrialist, host, and enemy to half the county — carved.',
+      },
+      {
+        sceneAsset: '/art/deco-1920s/scene/billiard-room.jpg',
+        text: 'By nine the party had scattered through the house, and by ten it had stopped pretending to enjoy itself.',
+      },
+      {
+        sceneAsset: '/art/deco-1920s/scene/study.jpg',
+        text: 'At ten o’clock there were raised voices in the study. A man and a woman. The word “beggar” was used, and not kindly.',
+      },
+      {
+        sceneAsset: '/art/deco-1920s/scene/staircase.jpg',
+        text: 'At seven minutes past midnight, Sir Edmund was found at the foot of his own grand staircase. He did not fall.',
+      },
+      {
+        sceneAsset: '/art/deco-1920s/scene/servants-passage.jpg',
+        text: 'The telephone line came down with the storm. The police cannot reach the Hall before morning.',
+      },
+      {
+        sceneAsset: '/art/deco-1920s/scene/entrance-hall.jpg',
+        text: 'So everyone who could have done it is still inside this house. And so are you.',
+        holdMs: 6000,
+      },
+    ],
+  },
   characters: DECO_1920S_CHARACTERS,
   clues: [
     // ---- Act 1: the body, the house, the first threads ----
@@ -549,6 +597,7 @@ export const blackwoodHall: CasePack = {
     },
     music: {
       menu: '/music/deco-1920s/menu-music.mp3',
+      prologue: '/music/deco-1920s/prologue.mp3',
       inGame: ['/music/deco-1920s/in-game-1.mp3', '/music/deco-1920s/in-game-2.mp3'],
     },
   },

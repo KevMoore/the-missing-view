@@ -189,6 +189,15 @@ wss.on('connection', (socket: WebSocket) => {
             }
             return;
           }
+          case 'prologue': {
+            // The console starts it; the screen is the only surface that knows
+            // when the last beat has actually finished, so it may end it.
+            const mayEnd = !msg.playing && client?.role === 'screen';
+            if (!room || (client?.role !== 'console' && !mayEnd))
+              throw new IllegalMove('facilitator only');
+            await room.setPrologue(msg.playing);
+            return;
+          }
           case 'add-bot': {
             if (!room || client?.role !== 'console') throw new IllegalMove('facilitator only');
             room.addBot();

@@ -5,6 +5,7 @@ import { remaining, useGameSocket, type ScreenView, type ServerMessage } from '.
 import { useMusic, type MusicCue } from '../music.js';
 import { useSuspectVoices } from '../voice.js';
 import { Backdrop } from './Backdrop.js';
+import { Prologue } from './Prologue.js';
 
 /**
  * The big screen has no scrollbar and nobody in the room can reach it, so
@@ -45,7 +46,13 @@ export function Screen() {
   const [muted, setMuted] = useState(() => sessionStorage.getItem('tmv-muted') === '1');
 
   // The menu theme carries the lobby; play drops it under the room's talking.
-  const cue: MusicCue = !joined ? null : (view?.phase ?? 'lobby') === 'lobby' ? 'menu' : 'game';
+  const cue: MusicCue = !joined
+    ? null
+    : view?.prologue
+      ? 'prologue'
+      : (view?.phase ?? 'lobby') === 'lobby'
+        ? 'menu'
+        : 'game';
   useMusic(cue, muted, view?.music);
 
   // The suspects speak here and nowhere else, for the same reason the score does.
@@ -137,6 +144,19 @@ export function Screen() {
           </div>
         </div>
       </>
+    );
+  }
+
+  // The opening owns the whole screen, so decide before building a board we
+  // would only throw away.
+  if (view?.prologue) {
+    return (
+      <Prologue
+        beats={view.prologue.beats}
+        onEnd={() => {
+          send({ type: 'prologue', playing: false });
+        }}
+      />
     );
   }
 

@@ -13,9 +13,13 @@ import type { Music } from './ws.js';
 /** In-game sits under the menu theme: the room is talking over it. */
 const MENU_VOLUME = 0.55;
 const IN_GAME_VOLUME = 0.3;
+/** The opening carries the room on its own, so it sits above the lobby theme. */
+const PROLOGUE_VOLUME = 0.62;
 const FADE_MS = 1200;
+/** The last beat lands, then the score goes with it rather than being cut. */
+const PROLOGUE_OUT_MS = 3500;
 
-export type MusicCue = 'menu' | 'game' | null;
+export type MusicCue = 'menu' | 'prologue' | 'game' | null;
 
 let el: HTMLAudioElement | null = null;
 let cue: MusicCue = null;
@@ -47,7 +51,9 @@ function fadeTo(target: number, ms: number, done?: () => void): void {
 
 function volumeFor(which: MusicCue): number {
   if (muted || which === null) return 0;
-  const base = which === 'menu' ? MENU_VOLUME : IN_GAME_VOLUME;
+  const base =
+    which === 'menu' ? MENU_VOLUME : which === 'prologue' ? PROLOGUE_VOLUME : IN_GAME_VOLUME;
+  // The narration must sit on top of its own score, not fight it.
   return ducked ? base * DUCK : base;
 }
 
@@ -65,7 +71,12 @@ export function setDucked(next: boolean): void {
 function load(): void {
   if (!el || cue === null) return;
   const inGame = tracks.inGame ?? [];
-  const src = cue === 'menu' ? tracks.menu : inGame[track % (inGame.length || 1)];
+  const src =
+    cue === 'menu'
+      ? tracks.menu
+      : cue === 'prologue'
+        ? (tracks.prologue ?? tracks.menu)
+        : inGame[track % (inGame.length || 1)];
   if (src === undefined) return; // this theme has no music for the current cue
   el.src = src;
   el.loop = cue === 'menu';
@@ -78,6 +89,19 @@ function load(): void {
       /* autoplay refused — the room simply plays without music */
     },
   );
+}
+
+/**
+ * Fade the opening's score away over a few seconds rather than cutting it. Used
+ * when the last beat lands, so the music ends with the story instead of being
+ * chopped off by the next screen.
+ */
+export function fadeOutPrologue(): void {
+  if (cue !== 'prologue' || !el) return;
+  const node = el;
+  fadeTo(0, PROLOGUE_OUT_MS, () => {
+    node.pause();
+  });
 }
 
 /** Advance through the in-game tracks; the menu theme loops on its own. */
