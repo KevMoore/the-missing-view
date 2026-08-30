@@ -17,14 +17,18 @@ import type { Insights as Data } from '../ws.js';
 export function Insights() {
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState('');
-  const key = new URLSearchParams(location.search).get('key') ?? '';
+  const params = new URLSearchParams(location.search);
+  const key = params.get('key') ?? '';
+  const since = params.get('since') ?? '';
 
   useEffect(() => {
     if (!key) {
       setError('This page needs a key.');
       return;
     }
-    fetch(`/api/insights?key=${encodeURIComponent(key)}`)
+    fetch(
+      `/api/insights?key=${encodeURIComponent(key)}${since ? `&since=${encodeURIComponent(since)}` : ''}`,
+    )
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
       .then((d: Data) => {
         setData(d);
@@ -32,7 +36,7 @@ export function Insights() {
       .catch(() => {
         setError('Not available. Check the key, and that TMV_INSIGHTS_KEY is set on the server.');
       });
-  }, [key]);
+  }, [key, since]);
 
   if (error) return <div className="stage center muted">{error}</div>;
   if (!data) return <div className="stage center muted">Reading the sessions…</div>;
@@ -42,7 +46,9 @@ export function Insights() {
       <div className="stage" style={{ maxWidth: 640 }}>
         <h1 className="title">Nothing yet</h1>
         <p className="muted center mt">
-          No finished sessions have been recorded. Games only persist when DATABASE_URL is set.
+          {data.since === undefined
+            ? 'No finished sessions have been recorded. Games only persist when DATABASE_URL is set.'
+            : `Nothing since ${data.since.slice(0, 10)}. Earlier sessions are still stored — nothing was deleted.`}
         </p>
       </div>
     );
@@ -56,6 +62,15 @@ export function Insights() {
       <p className="muted center small">
         {data.sessions} session{data.sessions === 1 ? '' : 's'} · {data.answers} answer
         {data.answers === 1 ? '' : 's'}
+        {data.since !== undefined && (
+          <>
+            {' · '}
+            counting from {data.since.slice(0, 10)}{' '}
+            <a href={`${location.pathname}?key=${encodeURIComponent(key)}&since=1970-01-01`}>
+              show everything
+            </a>
+          </>
+        )}
       </p>
 
       <div className="deco-frame mt">

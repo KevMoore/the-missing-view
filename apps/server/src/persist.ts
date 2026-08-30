@@ -111,11 +111,17 @@ export async function saveDebrief(
  * Bounded rather than paged. Beyond a few hundred sessions this wants a real
  * analytics story, and pretending otherwise here would hide that.
  */
-export async function readInsights(): Promise<Insights | null> {
+export async function readInsights(since?: Date): Promise<Insights | null> {
   if (!pool) return null;
+  // A baseline rather than a delete. Rehearsals, aborted runs and the author's
+  // own end-to-end tests are all real rows that should not be thrown away and
+  // should not be counted either; where the line falls is a question for the
+  // reader, not a reason to destroy the record.
+  const from = since ?? new Date(0);
   // Rows written before the metrics column existed carry null, not {}.
   const games = await pool.query<{ metrics: Record<string, unknown> | null; finished_at: Date }>(
-    'SELECT metrics, finished_at FROM games ORDER BY finished_at DESC LIMIT 500',
+    'SELECT metrics, finished_at FROM games WHERE finished_at >= $1 ORDER BY finished_at DESC LIMIT 500',
+    [from],
   );
   const answers = await pool.query<{
     knew_before: 'no' | 'suspected' | 'yes';
@@ -124,7 +130,8 @@ export async function readInsights(): Promise<Insights | null> {
     will_change: string | null;
     at: Date;
   }>(
-    'SELECT knew_before, saw_something, play_again, will_change, at FROM debrief ORDER BY at DESC LIMIT 2000',
+    'SELECT knew_before, saw_something, play_again, will_change, at FROM debrief WHERE at >= $1 ORDER BY at DESC LIMIT 2000',
+    [from],
   );
   return computeInsights(
     games.rows.map((r) => ({ metrics: r.metrics ?? {}, finishedAt: r.finished_at.toISOString() })),

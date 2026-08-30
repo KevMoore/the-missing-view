@@ -48,6 +48,11 @@ export interface Insights {
   medianPlayers: number | null;
   /** Most recent first. The qualitative half, and usually the useful half. */
   changes: { text: string; at: string }[];
+  /**
+   * Set when a baseline is in force. The page must say so: a figure that
+   * silently excludes half the record is worse than no figure.
+   */
+  since?: string;
 }
 
 export function computeInsights(sessions: SessionRow[], debriefs: DebriefRow[]): Insights {

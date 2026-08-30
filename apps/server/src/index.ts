@@ -32,6 +32,17 @@ const rooms = new Map<string, Room>();
 
 /** Unset means the insights endpoint does not exist at all. */
 const INSIGHTS_KEY = process.env.TMV_INSIGHTS_KEY ?? '';
+/**
+ * Default baseline: sessions before this are kept but not counted. Set it once
+ * the rehearsals are over, rather than deleting the rows they wrote.
+ */
+const INSIGHTS_SINCE = parseDate(process.env.TMV_INSIGHTS_SINCE);
+
+function parseDate(value: string | undefined): Date | undefined {
+  if (!value) return undefined;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? undefined : d;
+}
 
 /** Constant time, so a wrong key cannot be narrowed down by how fast it fails. */
 function sameKey(given: string, expected: string): boolean {
@@ -84,9 +95,18 @@ const server = createServer((req, res) => {
         res.end();
         return;
       }
-      const insights = await readInsights();
+      // An explicit ?since wins over the configured baseline, so a bad
+      // baseline is a question away from being corrected rather than a deploy.
+      const asked = parseDate(new URL(req.url, 'http://x').searchParams.get('since') ?? undefined);
+      const since = asked ?? INSIGHTS_SINCE;
+      const insights = await readInsights(since);
       res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
-      res.end(JSON.stringify(insights ?? { sessions: 0, answers: 0, noDatabase: true }));
+      res.end(
+        JSON.stringify({
+          ...(insights ?? { sessions: 0, answers: 0, noDatabase: true }),
+          ...(since ? { since: since.toISOString() } : {}),
+        }),
+      );
       return;
     }
 
