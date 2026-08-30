@@ -2,12 +2,19 @@
 import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import { remaining, useGameSocket, type ScreenView, type ServerMessage } from '../ws.js';
+import { useMusic, type MusicCue } from '../music.js';
+import { Backdrop } from './Backdrop.js';
 
 export function Screen() {
   const [view, setView] = useState<ScreenView | null>(null);
   const [joined, setJoined] = useState(() => Boolean(sessionStorage.getItem('tmv-screen-room')));
   const [codeInput, setCodeInput] = useState('');
   const [now, setNow] = useState(Date.now());
+  const [muted, setMuted] = useState(() => sessionStorage.getItem('tmv-muted') === '1');
+
+  // The menu theme carries the lobby; play drops it under the room's talking.
+  const cue: MusicCue = !joined ? null : (view?.phase ?? 'lobby') === 'lobby' ? 'menu' : 'game';
+  useMusic(cue, muted, view?.music);
 
   const { send, connected } = useGameSocket(
     (msg: ServerMessage) => {
@@ -33,50 +40,74 @@ export function Screen() {
     };
   }, []);
 
+  const chrome = (
+    <>
+      <Backdrop src={view?.sceneAsset} />
+      {joined && (
+        <button
+          className="mute"
+          onClick={() => {
+            const next = !muted;
+            setMuted(next);
+            sessionStorage.setItem('tmv-muted', next ? '1' : '0');
+          }}
+          aria-label={muted ? 'Unmute music' : 'Mute music'}
+          title={muted ? 'Unmute music' : 'Mute music'}
+        >
+          {muted ? '\u266a\u0338' : '\u266a'}
+        </button>
+      )}
+    </>
+  );
+
   if (!joined) {
     return (
-      <div className="stage" style={{ maxWidth: 560 }}>
-        <h1 className="title" style={{ fontSize: '2.4rem', marginBottom: '2rem' }}>
-          The Missing View
-        </h1>
-        <div className="deco-frame">
-          <div className="deco-rule">Big screen</div>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              const roomCode = codeInput.trim().toUpperCase();
-              sessionStorage.setItem('tmv-screen-room', roomCode);
-              send({ type: 'join', role: 'screen', roomCode });
-              setJoined(true);
-            }}
-          >
-            <input
-              placeholder="ROOM CODE"
-              value={codeInput}
-              onChange={(e) => {
-                setCodeInput(e.target.value);
+      <>
+        {chrome}
+        <div className="stage" style={{ maxWidth: 560 }}>
+          <h1 className="title" style={{ fontSize: '2.4rem', marginBottom: '2rem' }}>
+            The Missing View
+          </h1>
+          <div className="deco-frame">
+            <div className="deco-rule">Big screen</div>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const roomCode = codeInput.trim().toUpperCase();
+                sessionStorage.setItem('tmv-screen-room', roomCode);
+                send({ type: 'join', role: 'screen', roomCode });
+                setJoined(true);
               }}
-              aria-label="Room code"
-            />
-            <button
-              className="mt"
-              style={{ width: '100%' }}
-              disabled={!connected || codeInput.trim().length < 4}
             >
-              Take the stage
-            </button>
-          </form>
+              <input
+                placeholder="ROOM CODE"
+                value={codeInput}
+                onChange={(e) => {
+                  setCodeInput(e.target.value);
+                }}
+                aria-label="Room code"
+              />
+              <button
+                className="mt"
+                style={{ width: '100%' }}
+                disabled={!connected || codeInput.trim().length < 4}
+              >
+                Take the stage
+              </button>
+            </form>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
-  if (!view) return <div className="stage center muted">Waiting for the house lights…</div>;
-
-  if (view.phase === 'lobby') return <Lobby view={view} />;
-  if (view.phase === 'reveal' && view.reveal) return <Reveal view={view} />;
-
-  return (
+  const body = !view ? (
+    <div className="stage center muted">Waiting for the house lights…</div>
+  ) : view.phase === 'lobby' ? (
+    <Lobby view={view} />
+  ) : view.phase === 'reveal' && view.reveal ? (
+    <Reveal view={view} />
+  ) : (
     <div className="stage">
       <header className="row mb">
         <div className="grow">
@@ -178,6 +209,13 @@ export function Screen() {
       </div>
     </div>
   );
+
+  return (
+    <>
+      {chrome}
+      {body}
+    </>
+  );
 }
 
 function Lobby({ view }: { view: ScreenView }) {
@@ -197,6 +235,15 @@ function Lobby({ view }: { view: ScreenView }) {
       <div className="deco-rule" style={{ maxWidth: 500, margin: '1rem auto' }}>
         {view.caseTitle}
       </div>
+      {view.victim?.portraitAsset && (
+        <figure className="victim">
+          <img src={view.victim.portraitAsset} alt={view.victim.name} />
+          <figcaption>
+            {view.victim.name}
+            <span>1865 &ndash; 1926</span>
+          </figcaption>
+        </figure>
+      )}
       <p className="muted" style={{ maxWidth: 640, margin: '0 auto 2rem', lineHeight: 1.7 }}>
         {view.synopsis}
       </p>

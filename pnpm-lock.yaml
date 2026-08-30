@@ -31,12 +31,12 @@ importers:
 
   apps/server:
     dependencies:
-      '@anthropic-ai/sdk':
-        specifier: ^0.70.0
-        version: 0.70.1
       '@tmv/core':
         specifier: workspace:*
         version: link:../../packages/core
+      openai:
+        specifier: ^7.8.0
+        version: 7.8.0(ws@8.21.3)
       pg:
         specifier: ^8.16.0
         version: 8.23.0
@@ -107,18 +107,6 @@ importers:
         version: 3.2.7(@types/node@24.13.3)(tsx@4.23.12)
 
 packages:
-  '@anthropic-ai/sdk@0.70.1':
-    resolution:
-      {
-        integrity: sha512-AGEhifuvE22VxfQ5ROxViTgM8NuVQzEvqcN8bttR4AP24ythmNE/cL/SrOz79xiv7/osrsmCyErjsistJi7Z8A==,
-      }
-    hasBin: true
-    peerDependencies:
-      zod: ^3.25.0 || ^4.0.0
-    peerDependenciesMeta:
-      zod:
-        optional: true
-
   '@babel/code-frame@7.29.7':
     resolution:
       {
@@ -237,13 +225,6 @@ packages:
     engines: { node: '>=6.9.0' }
     peerDependencies:
       '@babel/core': ^7.0.0-0
-
-  '@babel/runtime@7.29.7':
-    resolution:
-      {
-        integrity: sha512-Nq8OhGWiZIZGV6hLHoyAKLLcJihP/xFeBMGJoUrxTX2psI8dCifzLhZISFb+VWS3wFMRDmCGw5R+dOySCqPLhw==,
-      }
-    engines: { node: '>=6.9.0' }
 
   '@babel/template@7.29.7':
     resolution:
@@ -1642,13 +1623,6 @@ packages:
         integrity: sha512-4bV5BfR2mqfQTJm+V5tPPdf+ZpuhiIvTuAB5g8kcrXOZpTT/QwwVRWBywX1ozr6lEuPdbHxwaJlm9G6mI2sfSQ==,
       }
 
-  json-schema-to-ts@3.1.1:
-    resolution:
-      {
-        integrity: sha512-+DWg8jCJG2TEnpy7kOm/7/AxaYoaRbjVB4LFZLySZlWn8exGs3A4OLJR966cVvU26N7X9TWxl+Jsw7dzAqKT6g==,
-      }
-    engines: { node: '>=16' }
-
   json-schema-traverse@0.4.1:
     resolution:
       {
@@ -1759,6 +1733,33 @@ packages:
         integrity: sha512-YHs7BmmcsdAI5Ozuf8JZo6PT0mv2GIWC9vMfvUC3dp65M8hn7Ux8CPL+2oBI7juNuj9d0ndhTcznq2ODBps9cQ==,
       }
     engines: { node: '>=18' }
+
+  openai@7.8.0:
+    resolution:
+      {
+        integrity: sha512-/2g9JzdnXNcjX1W/UlSNu+OdSFDAaAVt0n9Onom0kPenH54o59G2WrX/xjTnr26UHNSh6hxcAf58doGYRme2rw==,
+      }
+    engines: { node: '>=22.0.0' }
+    peerDependencies:
+      '@aws-sdk/credential-provider-node': '>=3.972.0 <4'
+      '@smithy/hash-node': '>=4.3.0 <5'
+      '@smithy/signature-v4': '>=5.4.0 <6'
+      undici: '>=5 <9'
+      ws: ^8.21.0
+      zod: ^3.25 || ^4.0
+    peerDependenciesMeta:
+      '@aws-sdk/credential-provider-node':
+        optional: true
+      '@smithy/hash-node':
+        optional: true
+      '@smithy/signature-v4':
+        optional: true
+      undici:
+        optional: true
+      ws:
+        optional: true
+      zod:
+        optional: true
 
   optionator@0.9.4:
     resolution:
@@ -2192,12 +2193,6 @@ packages:
       }
     engines: { node: '>=14.0.0' }
 
-  ts-algebra@2.0.0:
-    resolution:
-      {
-        integrity: sha512-FPAhNPFMrkwz76P7cdjdmiShwMynZYN6SgOujD1urY4oNm80Ou9oMdmbR45LotcKOXoy7wSmHkRFE6Mxbrhefw==,
-      }
-
   ts-api-utils@2.5.0:
     resolution:
       {
@@ -2435,10 +2430,6 @@ packages:
     engines: { node: '>=10' }
 
 snapshots:
-  '@anthropic-ai/sdk@0.70.1':
-    dependencies:
-      json-schema-to-ts: 3.1.1
-
   '@babel/code-frame@7.29.7':
     dependencies:
       '@babel/helper-validator-identifier': 7.29.7
@@ -2527,8 +2518,6 @@ snapshots:
     dependencies:
       '@babel/core': 7.29.7
       '@babel/helper-plugin-utils': 7.29.7
-
-  '@babel/runtime@7.29.7': {}
 
   '@babel/template@7.29.7':
     dependencies:
@@ -3299,11 +3288,6 @@ snapshots:
 
   json-buffer@3.0.1: {}
 
-  json-schema-to-ts@3.1.1:
-    dependencies:
-      '@babel/runtime': 7.29.7
-      ts-algebra: 2.0.0
-
   json-schema-traverse@0.4.1: {}
 
   json-stable-stringify-without-jsonify@1.0.1: {}
@@ -3354,6 +3338,10 @@ snapshots:
   natural-compare@1.4.0: {}
 
   node-releases@2.0.54: {}
+
+  openai@7.8.0(ws@8.21.3):
+    optionalDependencies:
+      ws: 8.21.3
 
   optionator@0.9.4:
     dependencies:
@@ -3576,8 +3564,6 @@ snapshots:
   tinyrainbow@2.0.0: {}
 
   tinyspy@4.0.4: {}
-
-  ts-algebra@2.0.0: {}
 
   ts-api-utils@2.5.0(typescript@5.9.3):
     dependencies:

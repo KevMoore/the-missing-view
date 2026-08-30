@@ -22,14 +22,70 @@ export interface CasePack {
   characters: PlayerCharacter[];
   clues: Clue[];
   acts: [Act, Act, Act];
+  /**
+   * Art direction and sound. Optional: a case with no theme still plays, the
+   * screen simply stays plain.
+   */
+  theme?: Theme;
   deal: DealConstraints;
   solution: Solution;
+}
+
+/**
+ * The look and sound of a case. A theme is deliberately coarser than a case:
+ * the scenes and music of "a 1920s country house" suit any mystery set in one,
+ * so a second case in the same theme reuses these and ships only its own cast.
+ *
+ * Asset convention, so a new theme is a folder rather than a code change:
+ *   /art/<theme.id>/scene/*.jpg   backdrops, shared by every case in the theme
+ *   /art/<case.id>/cast/*.jpg     portraits, specific to one case
+ *   /music/<theme.id>/*.mp3       the theme's music
+ */
+export interface Theme {
+  /** Stable id, and the asset folder name. */
+  id: string;
+  /** Human label for the authoring tool, e.g. "1920s country house". */
+  name: string;
+  scenes?: Scenes;
+  music?: Music;
+}
+
+/**
+ * Big-screen music. Played on the screen surface only — phones and the console
+ * stay silent, or eight handsets play the same track a beat apart.
+ */
+export interface Music {
+  /** Loops under the lobby. */
+  menu?: string;
+  /** Played in sequence through the acts, under the room's conversation. */
+  inGame?: string[];
+}
+
+/**
+ * Backdrop art for the big screen, one image per beat of the flow. Every field
+ * is optional; the server falls back act -> lobby so a partially-arted theme
+ * never blanks the stage mid-game.
+ */
+export interface Scenes {
+  /** Before the game starts, behind the join code. */
+  lobby?: string;
+  /** One per act, behind the evidence board. */
+  act1?: string;
+  act2?: string;
+  act3?: string;
+  /** While the house votes on the act commitment. */
+  commitment?: string;
+  /** While the accusation stands. */
+  accusation?: string;
+  /** Behind the reveal. */
+  reveal?: string;
 }
 
 export interface Victim {
   id: string;
   name: string;
   description: string;
+  portraitAsset?: string;
   /** How the body is found — the opening image of the game. */
   discovery: string;
 }
@@ -74,7 +130,25 @@ export interface PlayerCharacter {
   /** e.g. "the visiting doctor" — a reason to be in the house and to investigate. */
   role: string;
   briefing: string;
+  portraitAsset?: string;
+  /**
+   * How an AI player holding this character leans when it acts. Kept in the case
+   * rather than the server so a new case brings its own personalities instead of
+   * inheriting Blackwood Hall's. Unset behaves as 'detail'.
+   */
+  botLean?: BotLean;
 }
+
+/**
+ * The five ways an AI player can be useful to a room. Each maps to a different
+ * pressure on the human: evidence, narrative, doubt, precision, or agreement.
+ */
+export type BotLean =
+  | 'interrogate' // puts questions to the suspects
+  | 'theorise' // proposes readings of the evidence
+  | 'challenge' // pushes back on other people's theories
+  | 'detail' // gets clues onto the board
+  | 'listen'; // backs what others say, and says little
 
 export interface Clue {
   id: string;

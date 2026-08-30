@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { ClientMessage, ServerMessage } from '@tmv/server/src/protocol.js';
 
 export type { ClientMessage, ServerMessage };
-export type { ConsoleView, PhoneView, ScreenView } from '@tmv/server/src/protocol.js';
+export type { ConsoleView, Music, PhoneView, ScreenView } from '@tmv/server/src/protocol.js';
 
 function wsUrl(): string {
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';

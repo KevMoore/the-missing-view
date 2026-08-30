@@ -155,7 +155,16 @@ function Dossier({ view, send }: { view: PhoneView; send: Send }) {
     <div>
       <div className="deco-frame mb">
         <div className="deco-rule">{view.character.name}</div>
-        <p className="muted small">{view.character.role}</p>
+        <div className="dossier-head">
+          {view.character.portraitAsset && (
+            <img
+              className="dossier-portrait"
+              src={view.character.portraitAsset}
+              alt={view.character.name}
+            />
+          )}
+          <p className="muted small">{view.character.role}</p>
+        </div>
         <p className="mt small" style={{ lineHeight: 1.6 }}>
           {view.character.briefing}
         </p>

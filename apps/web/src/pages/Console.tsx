@@ -102,6 +102,18 @@ export function Console() {
               Start Act 1 ({String(view?.players.length ?? 0)} joined, need 4+)
             </button>
           )}
+          {phase === 'lobby' && (
+            <button
+              className="ghost"
+              disabled={(view?.players.length ?? 0) >= 8}
+              onClick={() => {
+                send({ type: 'add-bot' });
+              }}
+              title="Seats an AI player. They are dealt a character and play it."
+            >
+              Add an AI player
+            </button>
+          )}
           {phase === 'act' && (
             <button
               onClick={() => {
@@ -141,7 +153,8 @@ export function Console() {
             style={{ padding: '0.35rem 0', borderBottom: '1px solid var(--panel-edge)' }}
           >
             <span className="grow">
-              {p.connected ? '🟢' : '⚪️'} {p.name}
+              {p.bot ? '🤖' : p.connected ? '🟢' : '⚪️'} {p.name}
+              {p.bot && <span className="muted small"> · AI</span>}
             </span>
             <span className="muted small">{String(p.moveCount)} moves</span>
           </div>

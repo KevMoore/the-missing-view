@@ -47,7 +47,7 @@ describe('banked answers (D15)', () => {
   });
 
   it('askSuspect serves the bank when no API key is configured', async () => {
-    // Test env has no ANTHROPIC_API_KEY: the fallback path must fully work.
+    // Test env has no OPENAI_API_KEY: the fallback path must fully work.
     const { answer, fromBank } = await askSuspect(
       blackwoodHall,
       's-reeves',

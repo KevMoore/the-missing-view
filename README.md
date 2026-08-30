@@ -18,7 +18,18 @@ December 1926. 4–8 players, three acts, about an hour.
 | `apps/server`   | Node WS server: rooms, role-scoped views, LLM suspects (knowledge-sheet-contained, banked fallback), reveal builder, optional Postgres. |
 | `apps/web`      | One Vite/React bundle, three surfaces: `/` phone · `/screen` big screen · `/console` facilitator.                                       |
 | `e2e`           | Playwright: full game + accusation flow across multiple browser contexts.                                                               |
-| `docs`          | `decisions.md` (the D-numbers referenced in code) and `build-plan.md`.                                                                  |
+| `docs`          | `decisions.md` (the D-numbers referenced in code), `build-plan.md`, `art-and-music.md`, `ai-players.md`.                                |
+
+## Playing solo
+
+The facilitator console can seat **AI players** to make up the four-player
+minimum. They are dealt characters and play them. See `docs/ai-players.md`.
+
+## Art and music
+
+Painted portraits and per-beat backdrops, addressed by theme so a second case in
+the same setting reuses them. See `docs/art-and-music.md` for the asset layout,
+the scene table, and the Autosprite prompt recipe.
 
 ## Run it locally
 
@@ -41,12 +52,12 @@ pnpm exec playwright test # e2e (builds web, boots server on :3102)
 
 ## Environment
 
-| Var                 | Effect when set                                                                                                     |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `ANTHROPIC_API_KEY` | Live LLM suspects + LLM-phrased reveal. Unset: banked answers and deterministic prose — the game still fully works. |
-| `DATABASE_URL`      | Persists finished games + email opt-ins to Postgres. Unset: in-memory only.                                         |
-| `PORT`              | Server port (default 3001).                                                                                         |
-| `WEB_DIST`          | Path to the built web bundle (defaults to `apps/web/dist`).                                                         |
+| Var              | Effect when set                                                                                                                         |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `OPENAI_API_KEY` | Live LLM suspects + LLM-phrased reveal, via `gpt-5.6-luna`. Unset: banked answers and deterministic prose — the game still fully works. |
+| `DATABASE_URL`   | Persists finished games + email opt-ins to Postgres. Unset: in-memory only.                                                             |
+| `PORT`           | Server port (default 3001).                                                                                                             |
+| `WEB_DIST`       | Path to the built web bundle (defaults to `apps/web/dist`).                                                                             |
 
 ## Deploy
 

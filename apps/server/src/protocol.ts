@@ -3,7 +3,17 @@
  * the server sends role-scoped views. The solution never appears in any view
  * before the reveal (D21).
  */
-import type { Accusation, Move, Phase, SuspectQuestion, TabledClue, Theory } from '@tmv/core';
+import type {
+  Accusation,
+  Move,
+  Music,
+  Phase,
+  SuspectQuestion,
+  TabledClue,
+  Theory,
+} from '@tmv/core';
+
+export type { Music } from '@tmv/core';
 
 // ---- client -> server ----
 
@@ -13,6 +23,7 @@ export type ClientMessage =
   | { type: 'create-room'; caseId: string }
   | { type: 'move'; move: Move }
   | { type: 'facilitator'; action: 'start' | 'open-commitment' | 'next-act' | 'trigger-reveal' }
+  | { type: 'add-bot' }
   | { type: 'email-optin'; email: string };
 
 // ---- server -> client views ----
@@ -34,6 +45,11 @@ export interface ScreenView {
   actMinutes: number;
   caseTitle: string;
   synopsis: string;
+  /** Backdrop for the current beat of the flow, resolved server-side. */
+  sceneAsset?: string;
+  /** The theme's tracks; the big screen is the room's only speaker. */
+  music?: Music;
+  victim?: { name: string; portraitAsset?: string };
   players: { id: string; name: string; characterName: string }[];
   suspects: PublicSuspect[];
   board: (TabledClue & { title: string; text: string; byName: string })[];
@@ -53,7 +69,7 @@ export interface PhoneView {
   roomCode: string;
   phase: Phase;
   act: 1 | 2 | 3;
-  character: { name: string; role: string; briefing: string };
+  character: { name: string; role: string; briefing: string; portraitAsset?: string };
   hand: { id: string; title: string; text: string; tabled: boolean }[];
   players: { id: string; name: string }[];
   suspects: PublicSuspect[];
@@ -75,7 +91,7 @@ export interface ConsoleView {
   act: 1 | 2 | 3;
   actStartedAt?: number;
   actMinutes: number;
-  players: { id: string; name: string; connected: boolean; moveCount: number }[];
+  players: { id: string; name: string; connected: boolean; moveCount: number; bot: boolean }[];
   boardCount: number;
   questionCount: number;
   accusationMade: boolean;

@@ -16,6 +16,7 @@ import {
 import type { ConsoleView, PhoneView, ScreenView, ServerMessage } from './protocol.js';
 import { buildReveal, type RevealBundle } from './reveal.js';
 import { askSuspect } from './llm.js';
+import { BotDriver, type BotOptions } from './bots.js';
 
 export interface Client {
   role: 'phone' | 'screen' | 'console';
@@ -39,10 +40,35 @@ export class Room {
   private readonly qaHistory = new Map<string, { question: string; answer: string }[]>();
   private readonly seed = randomInt(1, 2 ** 31);
   private readonly emails: { playerId: string; email: string }[] = [];
+  private readonly bots: BotDriver;
 
-  constructor(pack: CasePack) {
+  constructor(pack: CasePack, botOptions: BotOptions = {}) {
     this.pack = pack;
     this.code = randomBytes(3).toString('hex').toUpperCase(); // 6 hex chars, unguessable enough for a room (D21)
+    this.bots = new BotDriver(this, pack, botOptions);
+  }
+
+  /** Seat an AI player. They join the lobby and are dealt a character like anyone. */
+  addBot(): { id: string; name: string } {
+    return this.bots.add();
+  }
+
+  isBot(playerId: string): boolean {
+    return this.bots.has(playerId);
+  }
+
+  get botCount(): number {
+    return this.bots.count;
+  }
+
+  /** Called when the room is torn down, so an abandoned room stops ticking. */
+  stopBots(): void {
+    this.bots.stop();
+  }
+
+  /** Drives one round of bot behaviour. Exposed so tests need no wall clock. */
+  async tickBots(): Promise<void> {
+    await this.bots.tick();
   }
 
   // ---- membership ----
@@ -151,6 +177,24 @@ export class Room {
     return def;
   }
 
+  /**
+   * The backdrop for the current beat of the flow (D20: the server decides,
+   * the screen only renders what it is handed). Falls back act -> lobby so a
+   * partially-arted case never shows a blank stage mid-game.
+   */
+  private sceneAsset(): string | undefined {
+    const scenes = this.pack.theme?.scenes;
+    if (!scenes) return undefined;
+    const s = this.state;
+    const phase = s?.phase ?? 'lobby';
+    if (phase === 'lobby') return scenes.lobby;
+    if (phase === 'reveal') return scenes.reveal ?? scenes.act3;
+    const forAct = [scenes.act1, scenes.act2, scenes.act3][(s?.act ?? 1) - 1];
+    if (s?.accusation) return scenes.accusation ?? forAct;
+    if (phase === 'commitment') return scenes.commitment ?? forAct;
+    return forAct ?? scenes.lobby;
+  }
+
   private names(): Map<string, string> {
     const m = new Map(this.lobby.map((p) => [p.id, p.name]));
     return m;
@@ -162,6 +206,7 @@ export class Room {
     const clueById = new Map(this.pack.clues.map((c) => [c.id, c]));
     const suspectName = (id: string) => this.pack.suspects.find((x) => x.id === id)?.name ?? id;
     const act = this.actDef(s?.act ?? 1);
+    const scene = this.sceneAsset();
     return {
       type: 'screen-view',
       roomCode: this.code,
@@ -171,6 +216,14 @@ export class Room {
       actMinutes: act.minutes,
       caseTitle: this.pack.title,
       synopsis: this.pack.synopsis,
+      ...(scene ? { sceneAsset: scene } : {}),
+      ...(this.pack.theme?.music ? { music: this.pack.theme.music } : {}),
+      victim: {
+        name: this.pack.victim.name,
+        ...(this.pack.victim.portraitAsset
+          ? { portraitAsset: this.pack.victim.portraitAsset }
+          : {}),
+      },
       players: (s?.players ?? [])
         .map((p) => ({
           id: p.id,
@@ -236,6 +289,7 @@ export class Room {
         name: character?.name ?? names.get(playerId) ?? '',
         role: character?.role ?? '',
         briefing: character?.briefing ?? 'Waiting for the facilitator to begin…',
+        ...(character?.portraitAsset ? { portraitAsset: character.portraitAsset } : {}),
       },
       hand: (player?.hand ?? []).map((id) => {
         const clue = clueById.get(id);
@@ -291,6 +345,7 @@ export class Room {
         name: p.name,
         connected: p.connected,
         moveCount: (s?.log ?? []).filter((e) => e.move.playerId === p.id).length,
+        bot: this.bots.has(p.id),
       })),
       boardCount: s?.board.length ?? 0,
       questionCount: s?.questions.length ?? 0,

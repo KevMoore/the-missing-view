@@ -28,6 +28,12 @@ for (const pack of cases.values()) {
 
 const rooms = new Map<string, Room>();
 
+/**
+ * Bots act every 25s by default, which is a human pace at the table but far too
+ * slow to watch during a playtest. Override to speed them up.
+ */
+const BOT_TICK_MS = Number(process.env.TMV_BOT_TICK_MS ?? 25_000);
+
 const MIME: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript',
@@ -115,7 +121,7 @@ wss.on('connection', (socket: WebSocket) => {
           case 'create-room': {
             const pack = cases.get(msg.caseId);
             if (!pack) throw new IllegalMove(`unknown case ${msg.caseId}`);
-            room = new Room(pack);
+            room = new Room(pack, { tickMs: BOT_TICK_MS });
             rooms.set(room.code, room);
             client = { role: 'console', send };
             room.addClient(client);
@@ -151,6 +157,12 @@ wss.on('connection', (socket: WebSocket) => {
                 await saveFinishedGame(room.code, snap.caseId, snap.state, room.emailOptIns);
               }
             }
+            return;
+          }
+          case 'add-bot': {
+            if (!room || client?.role !== 'console') throw new IllegalMove('facilitator only');
+            room.addBot();
+            room.pushViews();
             return;
           }
           case 'email-optin': {

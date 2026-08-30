@@ -7,3 +7,8 @@ dist/
 test-results/
 playwright-report/
 /e2e-results/
+.DS_Store
+
+# Source drops (music, reference art). The served copies live under
+# apps/web/public/ — committing both doubles every binary in the repo.
+assets/

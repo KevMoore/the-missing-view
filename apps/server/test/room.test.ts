@@ -115,3 +115,32 @@ describe('Room', () => {
     expect(() => room.joinPlayer('P9')).toThrow('full');
   });
 });
+
+describe('scene art', () => {
+  it('names one backdrop per beat of the flow, and portraits reach both surfaces', async () => {
+    const { room, attach, last } = harness();
+    const ids = ['Ana', 'Ben', 'Cat', 'Dev'].map((n) => room.joinPlayer(n));
+    ids.forEach((id) => attach('phone', id));
+    attach('screen');
+
+    const scenes = blackwoodHall.theme!.scenes!;
+    expect(last<ScreenView>('screen', 'screen-view')?.sceneAsset).toBe(scenes.lobby);
+
+    await room.facilitate('start');
+    expect(last<ScreenView>('screen', 'screen-view')?.sceneAsset).toBe(scenes.act1);
+
+    await room.facilitate('open-commitment');
+    expect(last<ScreenView>('screen', 'screen-view')?.sceneAsset).toBe(scenes.commitment);
+
+    await room.facilitate('next-act');
+    expect(last<ScreenView>('screen', 'screen-view')?.sceneAsset).toBe(scenes.act2);
+
+    // The victim rides the screen view; each player gets only their own face.
+    const screen = last<ScreenView>('screen', 'screen-view')!;
+    expect(screen.victim?.portraitAsset).toBe(blackwoodHall.victim.portraitAsset);
+    expect(screen.suspects.every((s) => s.portraitAsset)).toBe(true);
+    expect(last<PhoneView>(ids[0]!, 'phone-view')?.character.portraitAsset).toMatch(
+      /^\/art\/blackwood-hall\/cast\/pc-/,
+    );
+  });
+});

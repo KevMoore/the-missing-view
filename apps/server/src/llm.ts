@@ -7,12 +7,29 @@
  * checked against forbiddenFacts before display; on a hit or any API failure
  * the banked answer is served instead (D15).
  */
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import type { CasePack, PlayerCounters, Suspect } from '@tmv/core';
 
-const MODEL = 'claude-opus-5';
+const MODEL = 'gpt-5.6-luna';
 
-const client = process.env.ANTHROPIC_API_KEY ? new Anthropic() : null;
+/**
+ * A suspect's reply is two sentences of in-character dialogue and the whole
+ * room is waiting on it, so reasoning effort buys nothing and costs seconds.
+ * The reveal gets one step up: it has to phrase real counters warmly.
+ */
+const SUSPECT_EFFORT = 'none';
+const REVEAL_EFFORT = 'low';
+
+const client = process.env.OPENAI_API_KEY ? new OpenAI() : null;
+
+function describe(err: unknown): string {
+  return err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+}
+
+/** True when a live model is configured; false means the game runs off the bank. */
+export function llmConfigured(): boolean {
+  return client !== null;
+}
 
 /** Nearest banked answer by topic keyword overlap; last resort is a deflection. */
 export function bankedAnswer(suspect: Suspect, question: string): string {
@@ -78,35 +95,33 @@ export async function askSuspect(
   if (!client) return { answer: bankedAnswer(suspect, question), fromBank: true };
 
   try {
-    const response = await client.messages.create(
+    const response = await client.responses.create(
       {
         model: MODEL,
-        max_tokens: 1024, // deliberately short: spoken replies
-        system: suspectPrompt(pack, suspect),
-        messages: [
+        instructions: suspectPrompt(pack, suspect),
+        input: [
           ...history.flatMap((h) => [
             { role: 'user' as const, content: h.question },
             { role: 'assistant' as const, content: h.answer },
           ]),
-          { role: 'user', content: question },
+          { role: 'user' as const, content: question },
         ],
+        max_output_tokens: 1024, // deliberately short: spoken replies
+        reasoning: { effort: SUSPECT_EFFORT },
       },
       { timeout: 8_000 },
     );
-    if (response.stop_reason === 'refusal') {
-      return { answer: bankedAnswer(suspect, question), fromBank: true };
-    }
-    const text = response.content
-      .filter((b): b is Anthropic.TextBlock => b.type === 'text')
-      .map((b) => b.text)
-      .join(' ')
-      .trim();
-    if (!text || violatesForbiddenFacts(pack, text)) {
+    const text = response.output_text.trim();
+    // A refusal, a truncation, or a leak of the solution all serve the bank (D15).
+    if (!text || response.status === 'incomplete' || violatesForbiddenFacts(pack, text)) {
       return { answer: bankedAnswer(suspect, question), fromBank: true };
     }
     return { answer: text, fromBank: false };
-  } catch {
+  } catch (err) {
     // Any failure — timeout, rate limit, network — falls back to the bank (D15).
+    // Logged, not swallowed: a silent fallback looks exactly like a working game,
+    // so a misconfigured key would otherwise go unnoticed for a whole session.
+    console.warn('[llm] askSuspect fell back to the bank:', describe(err));
     return { answer: bankedAnswer(suspect, question), fromBank: true };
   }
 }
@@ -153,28 +168,75 @@ export async function phraseRevealLines(
           (p.counters.firstKeyTable ? ', FIRST to table a case-breaking clue' : ''),
       )
       .join('\n');
-    const response = await client.messages.create(
+    const response = await client.responses.create(
       {
         model: MODEL,
-        max_tokens: 2048,
-        system:
+        instructions:
           'You write the closing reveal of a team murder-mystery. For each player, write ONE warm, ' +
           'specific sentence naming their contribution, grounded ONLY in the facts given — never invent ' +
           'numbers or acts. No judgement, no ranking, no negatives. Return exactly one line per player, ' +
           'in the same order, no preamble.',
-        messages: [{ role: 'user', content: facts }],
+        input: facts,
+        max_output_tokens: 2048,
+        reasoning: { effort: REVEAL_EFFORT },
       },
       { timeout: 10_000 },
     );
-    const lines = response.content
-      .filter((b): b is Anthropic.TextBlock => b.type === 'text')
-      .map((b) => b.text)
-      .join('\n')
+    const lines = response.output_text
       .split('\n')
       .map((l) => l.trim())
       .filter(Boolean);
     return lines.length === players.length ? lines : null;
-  } catch {
+  } catch (err) {
+    console.warn('[llm] phraseRevealLines fell back to deterministic prose:', describe(err));
+    return null;
+  }
+}
+
+/**
+ * One line of dialogue for an AI player, spoken as their dealt investigator.
+ *
+ * Containment is the same as for the suspects (D13): a bot is given the case
+ * setting, its own character, and only what is already on the shared evidence
+ * board — never the solution, never another player's hand. Returns null on any
+ * failure so the caller can use its own deterministic wording (D15).
+ */
+export async function phraseBotLine(
+  pack: CasePack,
+  character: { name: string; role: string; briefing: string },
+  intent: string,
+  visible: string[],
+): Promise<string | null> {
+  if (!client) return null;
+  try {
+    const response = await client.responses.create(
+      {
+        model: MODEL,
+        instructions: [
+          `You are ${character.name}, ${character.role}, a guest investigating a death`,
+          `at a 1920s English country house. ${character.briefing}`,
+          `Setting: ${pack.setting}`,
+          '',
+          'Write ONE sentence, in character and in period, spoken aloud to the room.',
+          'Use only what the evidence below states — never invent a fact, a name, or an',
+          'accusation. Do not name a culprit. No preamble, no quotation marks.',
+        ].join('\n'),
+        input: [
+          visible.length ? `On the evidence board:\n${visible.join('\n')}` : 'The board is empty.',
+          '',
+          `What you want to say: ${intent}`,
+        ].join('\n'),
+        max_output_tokens: 512,
+        reasoning: { effort: SUSPECT_EFFORT },
+      },
+      { timeout: 8_000 },
+    );
+    const text = response.output_text.trim().replace(/^["\u201c]|["\u201d]$/g, '');
+    if (!text || response.status === 'incomplete' || violatesForbiddenFacts(pack, text))
+      return null;
+    return text;
+  } catch (err) {
+    console.warn('[llm] phraseBotLine fell back to deterministic wording:', describe(err));
     return null;
   }
 }

@@ -23,6 +23,7 @@ export const blackwoodHall: CasePack = {
   victim: {
     id: 'v-edmund',
     name: 'Sir Edmund Blackwood',
+    portraitAsset: '/art/blackwood-hall/cast/v-edmund.jpg',
     description:
       'Sixty-one. Self-made steel magnate. Charming in public, merciless in business. ' +
       'Three men in Yorkshire are said to toast his health only so they may drink.',
@@ -34,6 +35,7 @@ export const blackwoodHall: CasePack = {
     {
       id: 's-margaret',
       name: 'Lady Margaret Blackwood',
+      portraitAsset: '/art/blackwood-hall/cast/s-margaret.jpg',
       publicBio: 'Sir Edmund’s second wife. Elegant, watchful, and rather too calm.',
       persona:
         'Glacial politeness. Answers in complete, measured sentences. Deflects with ' +
@@ -84,6 +86,7 @@ export const blackwoodHall: CasePack = {
     {
       id: 's-ashworth',
       name: 'Captain James Ashworth',
+      portraitAsset: '/art/blackwood-hall/cast/s-ashworth.jpg',
       publicBio:
         'A decorated veteran of the Somme, friend of the late Blackwood heir. Invited for the shooting; stayed for reasons less clear.',
       persona:
@@ -134,6 +137,7 @@ export const blackwoodHall: CasePack = {
     {
       id: 's-cross',
       name: 'Miss Evelyn Cross',
+      portraitAsset: '/art/blackwood-hall/cast/s-cross.jpg',
       publicBio:
         'Sir Edmund’s private secretary these four years. Precise, indispensable, and the only member of staff he ever trusted with the books.',
       persona:
@@ -192,6 +196,7 @@ export const blackwoodHall: CasePack = {
     {
       id: 's-harmsworth',
       name: 'Dr Lionel Harmsworth',
+      portraitAsset: '/art/blackwood-hall/cast/s-harmsworth.jpg',
       publicBio:
         'The family physician of twenty years. Amiable, port-fond, and in and out of every bedroom in the Hall with his black bag.',
       persona:
@@ -244,6 +249,7 @@ export const blackwoodHall: CasePack = {
     {
       id: 's-reeves',
       name: 'Mr Thomas Reeves',
+      portraitAsset: '/art/blackwood-hall/cast/s-reeves.jpg',
       publicBio:
         'Butler at Blackwood Hall these thirty years. Served Sir Edmund’s father before him. The house runs on his pocket watch.',
       persona:
@@ -292,58 +298,74 @@ export const blackwoodHall: CasePack = {
     {
       id: 'pc-inspector',
       name: 'The Retired Inspector',
+      portraitAsset: '/art/blackwood-hall/cast/pc-inspector.jpg',
       role: 'a former Scotland Yard man, now a neighbour',
       briefing:
         'You came for the pheasant. You stayed because nobody else in this house knows how a crime scene works. Old habits are waking up.',
+      botLean: 'interrogate',
     },
     {
       id: 'pc-journalist',
       name: 'The Journalist',
+      portraitAsset: '/art/blackwood-hall/cast/pc-journalist.jpg',
       role: 'a Fleet Street correspondent, snowed in on the way to a story',
       briefing:
         'You smelt a story at dinner before anyone died. Now you have the story of the year — if you can untangle it before the police take it from you.',
+      botLean: 'theorise',
     },
     {
       id: 'pc-heiress',
       name: 'The American Heiress',
+      portraitAsset: '/art/blackwood-hall/cast/pc-heiress.jpg',
       role: 'a transatlantic guest with sharp eyes and no English reverence',
       briefing:
         'Everyone here performs politeness like a religion. You don’t share it, which means you see what they hide behind it.',
+      botLean: 'challenge',
     },
     {
       id: 'pc-solicitor',
       name: 'The Solicitor’s Clerk',
+      portraitAsset: '/art/blackwood-hall/cast/pc-solicitor.jpg',
       role: 'sent from London with papers for Sir Edmund to sign',
       briefing:
         'The papers in your case were urgent enough to send you through a snowstorm. You know more about Sir Edmund’s affairs than anyone here suspects.',
+      botLean: 'detail',
     },
     {
       id: 'pc-vicar',
       name: 'The Vicar',
+      portraitAsset: '/art/blackwood-hall/cast/pc-vicar.jpg',
       role: 'the parish priest, dined and stranded',
       briefing:
         'People tell you things. They always have. Tonight, listening may matter more than it ever has from the pulpit.',
+      botLean: 'listen',
     },
     {
       id: 'pc-governess',
       name: 'The Governess',
+      portraitAsset: '/art/blackwood-hall/cast/pc-governess.jpg',
       role: 'governess to the ward of the house',
       briefing:
         'The household barely notices you, which is its mistake. You notice everything, and you were awake past midnight.',
+      botLean: 'detail',
     },
     {
       id: 'pc-engineer',
       name: 'The Motoring Engineer',
+      portraitAsset: '/art/blackwood-hall/cast/pc-engineer.jpg',
       role: 'your motorcar failed on the moor road; the Hall took you in',
       briefing:
         'A stranger to all of them, obliged to none of them. You measure people the way you measure machines: by what they do under load.',
+      botLean: 'challenge',
     },
     {
       id: 'pc-companion',
       name: 'The Lady’s Companion',
+      portraitAsset: '/art/blackwood-hall/cast/pc-companion.jpg',
       role: 'companion to a dowager who has slept through everything',
       briefing:
         'You have spent years being agreeable in drawing rooms. You know exactly what it costs to hold a smile in place — and you can tell when someone else is paying it.',
+      botLean: 'listen',
     },
   ],
   clues: [
@@ -552,6 +574,24 @@ export const blackwoodHall: CasePack = {
       },
     },
   ],
+  theme: {
+    id: 'deco-1920s',
+    name: '1920s country house',
+    scenes: {
+      lobby: '/art/deco-1920s/scene/hall-exterior.jpg',
+      act1: '/art/deco-1920s/scene/entrance-hall.jpg',
+      act2: '/art/deco-1920s/scene/corridor.jpg',
+      act3: '/art/deco-1920s/scene/study.jpg',
+      commitment: '/art/deco-1920s/scene/drawing-room.jpg',
+      accusation: '/art/deco-1920s/scene/staircase.jpg',
+      reveal: '/art/deco-1920s/scene/landing.jpg',
+    },
+    music: {
+      menu: '/music/deco-1920s/menu-music.mp3',
+      inGame: ['/music/deco-1920s/in-game-1.mp3', '/music/deco-1920s/in-game-2.mp3'],
+    },
+  },
+
   deal: {
     neverSameHolder: [
       ['c-diary', 'c-ledger'],

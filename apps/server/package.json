@@ -11,8 +11,8 @@
     "build": "tsc --noEmit"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.70.0",
     "@tmv/core": "workspace:*",
+    "openai": "^7.8.0",
     "pg": "^8.16.0",
     "ws": "^8.18.0"
   },
