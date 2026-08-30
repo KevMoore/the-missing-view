@@ -490,6 +490,15 @@ function PrivateRead({ view, send }: { view: PhoneView; send: Send }) {
             </p>
           ))}
         </div>
+        {reveal.decision && (
+          <>
+            <div className="deco-rule mt">And how you decided</div>
+            <h3 className="decision-label">{reveal.decision.label}</h3>
+            <p className="small" style={{ lineHeight: 1.7 }}>
+              {reveal.decision.line}
+            </p>
+          </>
+        )}
         <div className="deco-rule mt">The quieter side</div>
         <p className="small" style={{ lineHeight: 1.7 }}>
           {reveal.quieterSide}

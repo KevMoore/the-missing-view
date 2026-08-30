@@ -123,6 +123,9 @@ test('a full game of Death at Blackwood Hall', async ({ browser }) => {
   expect(reached).toBeGreaterThan(0);
   expect(reached).toBeLessThanOrEqual(8);
 
+  // PRD §6: decision making, the fourth framework category, alongside the strength.
+  await expect(ana.getByText('And how you decided')).toBeVisible();
+
   // PRD §11: the individual half of the debrief sits with the private read.
   await expect(ana.getByText('Worth asking yourself')).toBeVisible();
   await expect(ana.getByText('What role did you naturally fall into?')).toBeVisible();

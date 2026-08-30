@@ -148,6 +148,8 @@ export interface SharedReveal {
 }
 
 export interface PrivateReveal {
+  /** How you decided, as opposed to what you contributed (PRD §6). */
+  decision?: { label: string; line: string };
   headline: string;
   strength: string;
   /** Every line cites a real logged act (D10). */

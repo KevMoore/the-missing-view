@@ -4,6 +4,9 @@
  * phrases the shared lines, with a deterministic fallback.
  */
 import {
+  computeDecisions,
+  DECISION_LABEL,
+  DECISION_LINE,
   computeMoments,
   MOMENT_ABSENT,
   MOMENT_LABEL,
@@ -36,6 +39,7 @@ export async function buildReveal(pack: CasePack, state: GameState): Promise<Rev
   const counters = computeCounters(state, pack.solution.provenBy);
   const byId = new Map(state.players.map((p) => [p.id, p]));
   const moments = computeMoments(pack, state);
+  const decisions = new Map(computeDecisions(state).map((d) => [d.playerId, d]));
   const playerName = (id?: string) => (id ? (byId.get(id)?.name ?? id) : '');
   const entries = counters.map((c) => ({
     counters: c,
@@ -53,9 +57,18 @@ export async function buildReveal(pack: CasePack, state: GameState): Promise<Rev
 
   const privates = new Map<string, PrivateReveal>();
   for (const e of entries) {
+    const decision = decisions.get(e.counters.playerId);
     privates.set(e.counters.playerId, {
       headline: STRENGTH_LABEL[e.strength],
       strength: e.strength,
+      ...(decision
+        ? {
+            decision: {
+              label: DECISION_LABEL[decision.style],
+              line: DECISION_LINE[decision.style],
+            },
+          }
+        : {}),
       evidence: privateEvidence(e.counters),
       quieterSide: quieterSide(e.counters),
     });

@@ -825,3 +825,11 @@ a:hover {
   padding-left: 0.8rem;
   margin: 0 0 0.6rem;
 }
+
+.decision-label {
+  font-family: var(--serif);
+  font-weight: normal;
+  font-size: 1.2rem;
+  color: var(--gold-bright);
+  margin: 0.2rem 0 0.3rem;
+}
