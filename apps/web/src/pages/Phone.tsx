@@ -1,6 +1,7 @@
 /** The player's phone: dossier, table/whisper, interrogate, vote, private reveal. */
 import { useState } from 'react';
 import { useGameSocket, type ClientMessage, type PhoneView, type ServerMessage } from '../ws.js';
+import { Landing } from './Landing.js';
 
 /** The stored seat: enough to re-join on any (re)connect. */
 function storedJoin(): ClientMessage | null {
@@ -41,7 +42,7 @@ export function Phone() {
   );
 
   if (!view) {
-    return (
+    const form = (
       <JoinForm
         connected={connected}
         onJoin={(code, name) => {
@@ -51,6 +52,10 @@ export function Phone() {
         error={error}
       />
     );
+    // Scanned the QR code, or already held a seat: the room is waiting, so ask
+    // for nothing but a name. Everyone else arrived cold and needs the door.
+    const expected = new URLSearchParams(location.search).has('code') || storedJoin() !== null;
+    return expected ? form : <Landing join={form} />;
   }
 
   if (view.phase === 'lobby') {
@@ -106,10 +111,8 @@ function JoinForm({
   const [code, setCode] = useState(params.get('code') ?? '');
   const [name, setName] = useState('');
   return (
-    <div className="phone-stage" style={{ paddingTop: '3rem' }}>
-      <h1 className="title" style={{ fontSize: '1.8rem', marginBottom: '1.5rem' }}>
-        The Missing View
-      </h1>
+    <div className="phone-stage join-stage">
+      <h1 className="title join-title">The Missing View</h1>
       <div className="deco-frame">
         <div className="deco-rule">Join the house party</div>
         <form
@@ -148,9 +151,6 @@ function JoinForm({
           on the screen everyone can see.
         </p>
       </div>
-      <p className="muted small center mt" style={{ opacity: 0.7 }}>
-        Running the game? <a href="/console">Open the facilitator console</a>.
-      </p>
       {error && <div className="toast">{error}</div>}
     </div>
   );

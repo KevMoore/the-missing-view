@@ -512,3 +512,137 @@ a:hover {
   color: var(--gold-bright);
   border-bottom-color: var(--gold);
 }
+
+/* ---- the front door, at a bare `/` ---- */
+
+.landing {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 1rem 4rem;
+}
+.landing-hero {
+  position: relative;
+  margin: 0 -1rem 2rem;
+  padding: 3.5rem 1.5rem 2.5rem;
+  overflow: hidden;
+  border-bottom: 1px solid var(--panel-edge);
+}
+.landing-hero-art {
+  position: absolute;
+  inset: 0;
+  background: url('/art/deco-1920s/scene/hall-exterior.jpg') center 35% / cover no-repeat;
+  opacity: 0.75;
+}
+.landing-hero-art::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(13, 11, 9, 0.3) 0%,
+    rgba(13, 11, 9, 0.45) 45%,
+    var(--ink) 100%
+  );
+}
+.landing-hero-text {
+  position: relative;
+  text-align: center;
+}
+.landing-title {
+  font-size: clamp(2rem, 7vw, 3.4rem);
+  margin-bottom: 0.4rem;
+}
+.landing-tagline {
+  font-family: var(--serif);
+  color: var(--gold);
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  margin-bottom: 1.6rem;
+}
+.landing-premise {
+  max-width: 34rem;
+  margin: 0 auto;
+  line-height: 1.75;
+  color: var(--cream);
+}
+
+.doors {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.2rem;
+  align-items: start;
+  margin-bottom: 1.2rem;
+}
+@media (max-width: 680px) {
+  .doors {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* The join form is handed in whole, so strip the page chrome it carries. */
+.doors .join-stage {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+.doors .join-stage > .join-title,
+.doors .join-stage > .deco-frame > .deco-rule {
+  display: none;
+}
+.doors .join-stage > .deco-frame {
+  border: none;
+  outline: none;
+  padding: 0;
+  background: none;
+}
+
+.btn-link {
+  display: block;
+  text-align: center;
+  border: 1px solid var(--gold);
+  border-bottom: 1px solid var(--gold);
+  color: var(--gold-bright);
+  padding: 0.7rem 1rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+}
+.btn-link:hover {
+  background: rgba(201, 163, 92, 0.12);
+  color: var(--gold-bright);
+}
+
+.landing-how .how-head {
+  font-family: var(--serif);
+  font-weight: normal;
+  font-size: 1.15rem;
+  color: var(--gold);
+  margin: 1.6rem 0 0.5rem;
+}
+.landing-how .how-head:first-of-type {
+  margin-top: 0.6rem;
+}
+.how-list {
+  margin: 0;
+  padding-left: 1.2rem;
+  line-height: 1.85;
+  color: var(--cream-dim);
+}
+.how-body {
+  line-height: 1.85;
+  color: var(--cream-dim);
+  margin: 0;
+}
+.landing-foot {
+  margin-top: 2rem;
+  opacity: 0.6;
+}
+
+.join-stage {
+  padding-top: 3rem;
+}
+.join-title {
+  font-size: 1.8rem;
+  margin-bottom: 1.5rem;
+}
