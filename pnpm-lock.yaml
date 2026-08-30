@@ -75,6 +75,9 @@ importers:
         specifier: ^19.1.0
         version: 19.2.8(react@19.2.8)
     devDependencies:
+      '@tmv/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@tmv/server':
         specifier: workspace:*
         version: link:../server

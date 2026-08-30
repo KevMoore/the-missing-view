@@ -4,6 +4,8 @@ import type { ClientMessage, ServerMessage } from '@tmv/server/src/protocol.js';
 
 export type { ClientMessage, ServerMessage };
 export type { ConsoleView, Music, PhoneView, ScreenView } from '@tmv/server/src/protocol.js';
+/** Not a wire message — the shape the insights endpoint returns. */
+export type { Insights } from '@tmv/core';
 
 function wsUrl(): string {
   const proto = location.protocol === 'https:' ? 'wss' : 'ws';

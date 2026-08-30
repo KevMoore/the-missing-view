@@ -3,6 +3,7 @@
  * HTTP serves the built web client; WS carries the game (D19/D20).
  */
 import { createServer } from 'node:http';
+import { timingSafeEqual } from 'node:crypto';
 import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -10,7 +11,7 @@ import { WebSocketServer, type WebSocket } from 'ws';
 import { blackwoodHall, IllegalMove, validateCase } from '@tmv/core';
 import { Room, type Client } from './room.js';
 import type { ClientMessage, ServerMessage } from './protocol.js';
-import { dbConfigured, initDb, saveDebrief, saveFinishedGame } from './persist.js';
+import { dbConfigured, initDb, readInsights, saveDebrief, saveFinishedGame } from './persist.js';
 import { llmConfigured } from './llm.js';
 
 const PORT = Number(process.env.PORT ?? 3001);
@@ -28,6 +29,16 @@ for (const pack of cases.values()) {
 }
 
 const rooms = new Map<string, Room>();
+
+/** Unset means the insights endpoint does not exist at all. */
+const INSIGHTS_KEY = process.env.TMV_INSIGHTS_KEY ?? '';
+
+/** Constant time, so a wrong key cannot be narrowed down by how fast it fails. */
+function sameKey(given: string, expected: string): boolean {
+  const a = Buffer.from(given);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
 
 /**
  * Bots act every 25s by default, which is a human pace at the table but far too
@@ -63,6 +74,22 @@ const server = createServer((req, res) => {
       );
       return;
     }
+    // Aggregate results across every session (PRD §19). Off entirely unless a
+    // key is configured: this is session data, and D21's "security light" is a
+    // reason to keep the surface small, not to leave it open.
+    if (req.url?.startsWith('/api/insights')) {
+      const key = new URL(req.url, 'http://x').searchParams.get('key') ?? '';
+      if (!INSIGHTS_KEY || !sameKey(key, INSIGHTS_KEY)) {
+        res.writeHead(404);
+        res.end();
+        return;
+      }
+      const insights = await readInsights();
+      res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
+      res.end(JSON.stringify(insights ?? { sessions: 0, answers: 0, noDatabase: true }));
+      return;
+    }
+
     // A suspect's reply, spoken. Held in memory by the room that made it, so it
     // dies with the game and never reaches disk.
     const voice = /^\/voice\/([0-9A-F]{6})\/([\w-]+)\.mp3$/.exec(req.url ?? '');
@@ -265,4 +292,5 @@ server.listen(PORT, () => {
   );
   console.log(`  llm: ${llmConfigured() ? 'live' : 'banked answers (OPENAI_API_KEY unset)'}`);
   console.log(`  db: ${dbConfigured() ? 'postgres' : 'in-memory (DATABASE_URL unset)'}`);
+  console.log(`  insights: ${INSIGHTS_KEY ? '/insights?key=…' : 'off (TMV_INSIGHTS_KEY unset)'}`);
 });

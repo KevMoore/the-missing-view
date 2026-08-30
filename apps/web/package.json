@@ -15,6 +15,7 @@
     "react-dom": "^19.1.0"
   },
   "devDependencies": {
+    "@tmv/core": "workspace:*",
     "@tmv/server": "workspace:*",
     "@types/qrcode": "^1.5.5",
     "@types/react": "^19.1.0",

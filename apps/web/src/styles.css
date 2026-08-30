@@ -833,3 +833,42 @@ a:hover {
   color: var(--gold-bright);
   margin: 0.2rem 0 0.3rem;
 }
+
+/* ---- results across sessions ---- */
+
+.headline-figure {
+  font-family: var(--serif);
+  font-size: clamp(3.5rem, 12vw, 6rem);
+  line-height: 1;
+  text-align: center;
+  color: var(--gold-bright);
+  margin: 0.5rem 0 0.3rem;
+}
+.split {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 1rem;
+}
+.stat {
+  text-align: center;
+  padding: 0.6rem 0.4rem;
+  border-top: 1px solid var(--panel-edge);
+}
+.stat-value {
+  font-family: var(--serif);
+  font-size: 1.9rem;
+  color: var(--gold-bright);
+  line-height: 1.2;
+}
+.stat-label {
+  font-size: 0.72rem;
+  color: var(--cream-dim);
+  line-height: 1.5;
+  margin-top: 0.2rem;
+}
+.insights .reflect {
+  margin-bottom: 0.8rem;
+  font-family: var(--serif);
+  font-size: 1.02rem;
+  color: var(--cream);
+}

@@ -7,5 +7,6 @@ export * from './reveal/counters.js';
 export * from './reveal/moments.js';
 export * from './reveal/metrics.js';
 export * from './reveal/decisions.js';
+export * from './reveal/insights.js';
 export * from './cast/deco-1920s.js';
 export { blackwoodHall } from './cases/blackwood-hall.js';

@@ -3,7 +3,7 @@
  * tests), everything is in-memory and this module is a no-op.
  */
 import pg from 'pg';
-import type { GameState } from '@tmv/core';
+import { computeInsights, type GameState, type Insights } from '@tmv/core';
 
 const url = process.env.DATABASE_URL;
 const pool = url
@@ -101,5 +101,39 @@ export async function saveDebrief(
       answer.wouldPlayAgain,
       answer.willChange ?? null,
     ],
+  );
+}
+
+/**
+ * Every session and every answer, aggregated. Null when there is no database:
+ * the games were still played, we simply kept nothing.
+ *
+ * Bounded rather than paged. Beyond a few hundred sessions this wants a real
+ * analytics story, and pretending otherwise here would hide that.
+ */
+export async function readInsights(): Promise<Insights | null> {
+  if (!pool) return null;
+  // Rows written before the metrics column existed carry null, not {}.
+  const games = await pool.query<{ metrics: Record<string, unknown> | null; finished_at: Date }>(
+    'SELECT metrics, finished_at FROM games ORDER BY finished_at DESC LIMIT 500',
+  );
+  const answers = await pool.query<{
+    knew_before: 'no' | 'suspected' | 'yes';
+    saw_something: boolean;
+    play_again: boolean;
+    will_change: string | null;
+    at: Date;
+  }>(
+    'SELECT knew_before, saw_something, play_again, will_change, at FROM debrief ORDER BY at DESC LIMIT 2000',
+  );
+  return computeInsights(
+    games.rows.map((r) => ({ metrics: r.metrics ?? {}, finishedAt: r.finished_at.toISOString() })),
+    answers.rows.map((r) => ({
+      knewBefore: r.knew_before,
+      sawSomething: r.saw_something,
+      playAgain: r.play_again,
+      willChange: r.will_change,
+      at: r.at.toISOString(),
+    })),
   );
 }
