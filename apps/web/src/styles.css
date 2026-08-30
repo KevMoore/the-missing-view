@@ -808,3 +808,20 @@ a:hover {
 .moment-dot.missed {
   color: var(--blood);
 }
+
+.choice-row {
+  display: flex;
+  gap: 0.5rem;
+}
+.choice-row button {
+  flex: 1;
+  padding: 0.6rem 0.4rem;
+  font-size: 0.72rem;
+}
+.reflect {
+  line-height: 1.7;
+  color: var(--cream-dim);
+  border-left: 2px solid var(--panel-edge);
+  padding-left: 0.8rem;
+  margin: 0 0 0.6rem;
+}

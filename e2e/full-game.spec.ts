@@ -123,6 +123,22 @@ test('a full game of Death at Blackwood Hall', async ({ browser }) => {
   expect(reached).toBeGreaterThan(0);
   expect(reached).toBeLessThanOrEqual(8);
 
+  // PRD §11: the individual half of the debrief sits with the private read.
+  await expect(ana.getByText('Worth asking yourself')).toBeVisible();
+  await expect(ana.getByText('What role did you naturally fall into?')).toBeVisible();
+
+  // PRD §19: three taps and one optional line. The first question is the one
+  // the whole proposition is measured on.
+  await expect(
+    ana.getByText('Before the reveal, did you know this was about your team?'),
+  ).toBeVisible();
+  await ana.getByRole('button', { name: 'No idea' }).click();
+  await ana.getByRole('button', { name: 'Yes' }).first().click();
+  await ana.getByRole('button', { name: 'Yes' }).last().click();
+  await ana.getByLabel('What will you do differently').fill('Ask the quiet one first.');
+  await ana.getByRole('button', { name: 'Send' }).click();
+  await expect(ana.getByText('That helps more than you would think.')).toBeVisible();
+
   // Email opt-in from Ana's private read.
   await ana.getByLabel('Email address').fill('ana@example.com');
   await ana.getByRole('button', { name: 'Email me my read' }).click();

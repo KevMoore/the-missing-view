@@ -27,7 +27,26 @@ export async function initDb(): Promise<void> {
       case_id     TEXT NOT NULL,
       state       JSONB NOT NULL,
       emails      JSONB NOT NULL DEFAULT '[]',
-      finished_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      finished_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      metrics     JSONB NOT NULL DEFAULT '{}'
+    )
+  `);
+  // Older deployments predate the column; adding it is cheaper than a migration tool.
+  await pool.query(
+    `ALTER TABLE games ADD COLUMN IF NOT EXISTS metrics JSONB NOT NULL DEFAULT '{}'`,
+  );
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS debrief (
+      id            BIGSERIAL PRIMARY KEY,
+      room_code     TEXT NOT NULL,
+      case_id       TEXT NOT NULL,
+      player_id     TEXT NOT NULL,
+      knew_before   TEXT NOT NULL,
+      saw_something BOOLEAN NOT NULL,
+      play_again    BOOLEAN NOT NULL,
+      will_change   TEXT,
+      at            TIMESTAMPTZ NOT NULL DEFAULT now(),
+      UNIQUE (room_code, player_id)
     )
   `);
 }
@@ -37,10 +56,50 @@ export async function saveFinishedGame(
   caseId: string,
   state: GameState,
   emails: readonly { playerId: string; email: string }[],
+  metrics: unknown = {},
 ): Promise<void> {
   if (!pool) return;
   await pool.query(
-    'INSERT INTO games (room_code, case_id, state, emails) VALUES ($1, $2, $3, $4)',
-    [roomCode, caseId, JSON.stringify(state), JSON.stringify(emails)],
+    'INSERT INTO games (room_code, case_id, state, emails, metrics) VALUES ($1, $2, $3, $4, $5)',
+    [roomCode, caseId, JSON.stringify(state), JSON.stringify(emails), JSON.stringify(metrics)],
+  );
+}
+
+export interface DebriefAnswer {
+  knewBefore: 'no' | 'suspected' | 'yes';
+  sawSomething: boolean;
+  wouldPlayAgain: boolean;
+  willChange?: string;
+}
+
+/**
+ * One row per player per room. Re-answering overwrites rather than duplicating,
+ * because a phone that reconnects and resubmits is not a second opinion.
+ */
+export async function saveDebrief(
+  roomCode: string,
+  caseId: string,
+  playerId: string,
+  answer: DebriefAnswer,
+): Promise<void> {
+  if (!pool) return;
+  await pool.query(
+    `INSERT INTO debrief (room_code, case_id, player_id, knew_before, saw_something, play_again, will_change)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     ON CONFLICT (room_code, player_id) DO UPDATE SET
+       knew_before = EXCLUDED.knew_before,
+       saw_something = EXCLUDED.saw_something,
+       play_again = EXCLUDED.play_again,
+       will_change = EXCLUDED.will_change,
+       at = now()`,
+    [
+      roomCode,
+      caseId,
+      playerId,
+      answer.knewBefore,
+      answer.sawSomething,
+      answer.wouldPlayAgain,
+      answer.willChange ?? null,
+    ],
   );
 }

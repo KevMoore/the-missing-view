@@ -495,6 +495,24 @@ function PrivateRead({ view, send }: { view: PhoneView; send: Send }) {
           {reveal.quieterSide}
         </p>
       </div>
+
+      {/* PRD §11: the individual half of the debrief. Questions to sit with,
+          not inputs — the answers belong in the room, out loud. */}
+      <div className="deco-frame mt fade-up">
+        <div className="deco-rule">Worth asking yourself</div>
+        {[
+          'What role did you naturally fall into?',
+          'Did that surprise you?',
+          'When did you feel most useful?',
+          'Did you behave differently from how you expected?',
+        ].map((q) => (
+          <p className="small reflect" key={q}>
+            {q}
+          </p>
+        ))}
+      </div>
+
+      <Debrief send={send} />
       <div className="deco-frame mt">
         <div className="deco-rule">Keep it</div>
         {sent ? (
@@ -525,6 +543,116 @@ function PrivateRead({ view, send }: { view: PhoneView; send: Send }) {
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * The post-game questions (PRD §19).
+ *
+ * Three taps and one optional line. A room that has just finished a mystery
+ * will not fill in a survey, and asking for six answers loses the one that
+ * matters — whether they knew this was about the team before the reveal. That
+ * single number is how you tell if the whole proposition works.
+ */
+function Debrief({ send }: { send: Send }) {
+  const [knewBefore, setKnew] = useState<'no' | 'suspected' | 'yes' | null>(null);
+  const [sawSomething, setSaw] = useState<boolean | null>(null);
+  const [wouldPlayAgain, setAgain] = useState<boolean | null>(null);
+  const [willChange, setChange] = useState('');
+  const [sent, setSent] = useState(false);
+
+  if (sent) {
+    return (
+      <div className="deco-frame mt">
+        <div className="deco-rule">Thank you</div>
+        <p className="small muted">That helps more than you would think.</p>
+      </div>
+    );
+  }
+
+  const answered = knewBefore !== null && sawSomething !== null && wouldPlayAgain !== null;
+
+  return (
+    <div className="deco-frame mt">
+      <div className="deco-rule">Three quick questions</div>
+
+      <p className="small mb">Before the reveal, did you know this was about your team?</p>
+      <div className="choice-row mb">
+        {(
+          [
+            ['no', 'No idea'],
+            ['suspected', 'Suspected'],
+            ['yes', 'Knew'],
+          ] as const
+        ).map(([value, label]) => (
+          <button
+            key={value}
+            className={knewBefore === value ? '' : 'ghost'}
+            onClick={() => {
+              setKnew(value);
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <p className="small mb">Did it show you something about how your team works?</p>
+      <YesNo value={sawSomething} onChange={setSaw} />
+
+      <p className="small mb mt">Would you play another?</p>
+      <YesNo value={wouldPlayAgain} onChange={setAgain} />
+
+      <p className="small mb mt">
+        What will you do differently in your next team meeting?{' '}
+        <span className="muted">Optional.</span>
+      </p>
+      <textarea
+        value={willChange}
+        onChange={(e) => {
+          setChange(e.target.value);
+        }}
+        aria-label="What will you do differently"
+        rows={3}
+      />
+
+      <button
+        className="mt"
+        style={{ width: '100%' }}
+        disabled={!answered}
+        onClick={() => {
+          if (knewBefore === null || sawSomething === null || wouldPlayAgain === null) return;
+          send({
+            type: 'debrief',
+            knewBefore,
+            sawSomething,
+            wouldPlayAgain,
+            ...(willChange.trim() ? { willChange: willChange.trim() } : {}),
+          });
+          setSent(true);
+        }}
+      >
+        Send
+      </button>
+    </div>
+  );
+}
+
+function YesNo({ value, onChange }: { value: boolean | null; onChange: (v: boolean) => void }) {
+  return (
+    <div className="choice-row">
+      {[true, false].map((v) => (
+        <button
+          key={String(v)}
+          className={value === v ? '' : 'ghost'}
+          onClick={() => {
+            onChange(v);
+          }}
+        >
+          {v ? 'Yes' : 'No'}
+        </button>
+      ))}
     </div>
   );
 }

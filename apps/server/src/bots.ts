@@ -53,7 +53,8 @@ export class BotDriver {
   private readonly host: BotHost;
   private readonly pack: CasePack;
   private readonly opts: Required<BotOptions>;
-  private readonly ids = new Set<string>();
+  /** Read by the room so metrics can separate a real table from a solo playtest. */
+  readonly ids = new Set<string>();
   /** Commitments already voted in, so a bot votes once however often we tick. */
   private readonly voted = new Set<string>();
   private timer: ReturnType<typeof setInterval> | null = null;

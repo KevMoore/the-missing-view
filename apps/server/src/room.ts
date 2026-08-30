@@ -4,6 +4,8 @@
  */
 import { randomBytes, randomInt } from 'node:crypto';
 import {
+  computeMetrics,
+  summariseMetrics,
   applyFacilitator,
   applyMove,
   createGame,
@@ -431,5 +433,21 @@ export class Room {
   /** For persistence after the game. */
   snapshot(): { caseId: string; state: GameState | null } {
     return { caseId: this.pack.id, state: this.state };
+  }
+
+  /**
+   * What this session tells us about itself (PRD §19). Logged as one line as
+   * well as stored, so a room is legible from the Render log with no database.
+   */
+  metrics(): ReturnType<typeof computeMetrics> | null {
+    if (!this.state) return null;
+    const m = computeMetrics(this.pack, this.state, this.bots.ids);
+    console.log(summariseMetrics(m));
+    return m;
+  }
+
+  /** Which player this connection is, for attributing a debrief answer. */
+  hasPlayer(playerId: string): boolean {
+    return this.lobby.some((p) => p.id === playerId);
   }
 }

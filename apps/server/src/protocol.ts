@@ -24,6 +24,22 @@ export type ClientMessage =
   | { type: 'move'; move: Move }
   | { type: 'facilitator'; action: 'start' | 'open-commitment' | 'next-act' | 'trigger-reveal' }
   | { type: 'prologue'; playing: boolean }
+  | {
+      /**
+       * The post-game questions (PRD §19). Kept to three taps and one optional
+       * line: a room that has just finished will not fill in a survey, and the
+       * one number that matters is lost entirely if we ask for six.
+       */
+      type: 'debrief';
+      /** Did they know it was about the team before the reveal? */
+      knewBefore: 'no' | 'suspected' | 'yes';
+      /** Did it show them something about how the team works? */
+      sawSomething: boolean;
+      /** Would they play another? */
+      wouldPlayAgain: boolean;
+      /** "What will you do differently in your next team meeting?" — optional. */
+      willChange?: string;
+    }
   | { type: 'add-bot' }
   | { type: 'email-optin'; email: string };
 

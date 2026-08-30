@@ -10,7 +10,7 @@ import { WebSocketServer, type WebSocket } from 'ws';
 import { blackwoodHall, IllegalMove, validateCase } from '@tmv/core';
 import { Room, type Client } from './room.js';
 import type { ClientMessage, ServerMessage } from './protocol.js';
-import { dbConfigured, initDb, saveFinishedGame } from './persist.js';
+import { dbConfigured, initDb, saveDebrief, saveFinishedGame } from './persist.js';
 import { llmConfigured } from './llm.js';
 
 const PORT = Number(process.env.PORT ?? 3001);
@@ -198,9 +198,28 @@ wss.on('connection', (socket: WebSocket) => {
             if (msg.action === 'trigger-reveal' || msg.action === 'next-act') {
               const snap = room.snapshot();
               if (snap.state?.phase === 'reveal') {
-                await saveFinishedGame(room.code, snap.caseId, snap.state, room.emailOptIns);
+                await saveFinishedGame(
+                  room.code,
+                  snap.caseId,
+                  snap.state,
+                  room.emailOptIns,
+                  room.metrics() ?? {},
+                );
               }
             }
+            return;
+          }
+          case 'debrief': {
+            // The one question the product lives or dies on (PRD §19): did they
+            // know it was about the team before the reveal?
+            if (!room || client?.role !== 'phone' || !client.playerId)
+              throw new IllegalMove('players only');
+            await saveDebrief(room.code, room.snapshot().caseId, client.playerId, {
+              knewBefore: msg.knewBefore,
+              sawSomething: msg.sawSomething,
+              wouldPlayAgain: msg.wouldPlayAgain,
+              ...(msg.willChange ? { willChange: msg.willChange } : {}),
+            });
             return;
           }
           case 'prologue': {
