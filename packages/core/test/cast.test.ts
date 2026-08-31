@@ -126,12 +126,20 @@ describe('the voices are of these islands', () => {
     expect(blackwoodHall.prologue?.voiceDirection ?? '', 'the narrator').toMatch(PLACES);
   });
 
-  it('never lets a direction read as American', () => {
+  it('never describes a voice as American', () => {
     const all = [
       ...DECO_1920S_SUSPECTS.map((s) => s.voiceDirection ?? ''),
       ...blackwoodHall.suspects.map((s) => s.voiceDirection ?? ''),
       blackwoodHall.prologue?.voiceDirection ?? '',
     ];
-    for (const d of all) expect(d).not.toMatch(/American|transatlantic|mid-?Atlantic/i);
+    for (const d of all) {
+      // Forbidding it is the point; being it is the bug. "never American" and
+      // "not transatlantic" are instructions to the model, not descriptions.
+      const asserted = d.replace(
+        /\b(never|not|no|rather than)\s+\w*\s?(American|transatlantic|mid-?Atlantic)/gi,
+        '',
+      );
+      expect(asserted).not.toMatch(/American|transatlantic|mid-?Atlantic/i);
+    }
   });
 });

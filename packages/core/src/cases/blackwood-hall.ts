@@ -221,7 +221,7 @@ export const blackwoodHall: CasePack = {
       persona:
         'Bluff, genial, evasive by joviality. Protects his patients’ confidences ' +
         'like a dragon on gold, which makes him look guiltier than he is.',
-      voice: 'ballad',
+      voice: 'onyx',
       voiceDirection:
         'British, old-school Harley Street — a man of sixty-four, plummy and port-warmed, a ' +
         'good deal of chest in it. Rolls into his sentences and chuckles halfway through his ' +
@@ -280,7 +280,7 @@ export const blackwoodHall: CasePack = {
       persona:
         'Formal, unshakeable, loyal to the house itself rather than to any one member of it. ' +
         'Delivers devastating facts in a tone suitable for announcing dinner.',
-      voice: 'fable',
+      voice: 'ballad',
       voiceDirection:
         'British to the bone — the English butler, fifty-eight, thirty years in service. ' +
         'Formal, entirely level, unhurried, each sentence closed and set down. Announces a ' +
@@ -336,12 +336,17 @@ export const blackwoodHall: CasePack = {
    * room, the billiard room and the servants' passage appear nowhere else.
    */
   prologue: {
-    voice: 'onyx',
+    voice: 'fable',
     voiceDirection:
-      'British, and unmistakably so — an aristocratic English bass-baritone of about seventy, ' +
-      'deep and resonant with real weight at the bottom of it. Immaculate diction, every ' +
-      'consonant finished. Slow and utterly unhurried, long pauses between sentences, and a ' +
-      'faint controlled relish in the darker words. Never loud. The calm is what frightens.',
+      'An elderly Englishman of seventy-five. This is the single most important thing: he is ' +
+      'OLD and he is BRITISH, and both must be audible in the first three words. ' +
+      'Received Pronunciation of the pre-war kind, the English of a man who learned it before ' +
+      'the wireless. A deep bass-baritone worn rough at the bottom by age — some gravel in it, ' +
+      'a little dryness, the breath of a much older man. Markedly slow. Long, unhurried pauses ' +
+      'between sentences, longer than feel comfortable. Every consonant finished; every vowel ' +
+      'British and never American; non-rhotic, so no R is sounded at the end of a word. Quiet ' +
+      'throughout, with a faint controlled relish in the darker words. He has told this story ' +
+      'before, and he is in no hurry at all.',
     beats: [
       {
         sceneAsset: '/art/deco-1920s/scene/moor-road.jpg',

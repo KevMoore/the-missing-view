@@ -37,6 +37,39 @@ function useShortScreen(): boolean {
   return short;
 }
 
+/**
+ * The face of whoever did this, beside what they did.
+ *
+ * The player portraits were painted for the game and only the phone that held
+ * one ever saw it — the room watched a list of first names. Putting the face
+ * against the act is the cheapest way to make a contribution feel like it came
+ * from a person rather than from a row in a log.
+ *
+ * Falls back to the name alone, since a case need not ship portraits at all.
+ */
+function Who({
+  player,
+  prefix,
+}: {
+  player: ScreenPlayer | undefined;
+  prefix?: string | undefined;
+}) {
+  if (!player) return null;
+  return (
+    <span className="who-chip">
+      {player.portraitAsset !== undefined && (
+        <img src={player.portraitAsset} alt="" aria-hidden className="who-face" />
+      )}
+      <span>
+        {prefix}
+        {player.name}
+      </span>
+    </span>
+  );
+}
+
+type ScreenPlayer = ScreenView['players'][number];
+
 /** Says out loud what the cap is hiding, so the board never looks smaller than it is. */
 function Earlier({
   total,
@@ -65,6 +98,7 @@ export function Screen() {
   const [now, setNow] = useState(Date.now());
   const [muted, setMuted] = useState(() => sessionStorage.getItem('tmv-muted') === '1');
   const short = useShortScreen();
+  const cast = useMemo(() => new Map((view?.players ?? []).map((p) => [p.id, p])), [view?.players]);
   const caps = short
     ? { questions: 2, theories: 2, boardFull: 1, boardSlim: 4 }
     : { questions: 3, theories: 3, boardFull: 2, boardSlim: 7 };
@@ -263,7 +297,7 @@ export function Screen() {
           {latest(view.questions, caps.questions).map((q) => (
             <div className="qa fade-up" key={q.id}>
               <div className="q">
-                {q.byName} asks {q.suspectName}: “{q.text}”
+                <Who player={cast.get(q.by)} /> asks {q.suspectName}: “{q.text}”
               </div>
               {q.answer ? (
                 <div className="a">“{q.answer}”</div>
@@ -281,9 +315,10 @@ export function Screen() {
               <div className="deco-rule">Theories</div>
               {latest(view.theories, caps.theories).map((t) => (
                 <div className="card fade-up" key={t.id}>
-                  <p>
-                    “{t.text}” <span className="byline">— {t.byName}</span>
-                  </p>
+                  <p>“{t.text}”</p>
+                  <div className="byline">
+                    <Who player={cast.get(t.by)} prefix="— " />
+                  </div>
                   <div className="byline">
                     backed by {t.backers.length} · challenged by {t.challengers.length}
                   </div>
@@ -308,13 +343,17 @@ export function Screen() {
               <div className="card fade-up" key={c.clueId}>
                 <h3>{c.title}</h3>
                 <p>{c.text}</p>
-                <div className="byline">tabled by {c.byName}</div>
+                <div className="byline">
+                  <Who player={cast.get(c.by)} prefix="tabled by " />
+                </div>
               </div>
             ))}
             {latest(view.board.slice(0, -caps.boardFull), caps.boardSlim).map((c) => (
               <div className="card-slim" key={c.clueId}>
                 <span className="grow">{c.title}</span>
-                <span className="byline">{c.byName}</span>
+                <span className="byline">
+                  <Who player={cast.get(c.by)} />
+                </span>
               </div>
             ))}
             <Earlier

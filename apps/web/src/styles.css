@@ -913,3 +913,25 @@ a:hover {
   background: rgba(201, 163, 92, 0.08);
   line-height: 1.6;
 }
+
+/* ---- a player's painted face, beside what they did ---- */
+
+.who-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  vertical-align: middle;
+}
+.who-face {
+  width: 1.9em;
+  height: 1.9em;
+  object-fit: cover;
+  object-position: center 18%;
+  border: 1px solid var(--gold);
+  flex: none;
+}
+.card-slim .who-face,
+.byline .who-face {
+  width: 1.5em;
+  height: 1.5em;
+}

@@ -282,11 +282,15 @@ export class Room {
           : {}),
       },
       players: (s?.players ?? [])
-        .map((p) => ({
-          id: p.id,
-          name: names.get(p.id) ?? p.id,
-          characterName: this.pack.characters.find((c) => c.id === p.characterId)?.name ?? '',
-        }))
+        .map((p) => {
+          const character = this.pack.characters.find((c) => c.id === p.characterId);
+          return {
+            id: p.id,
+            name: names.get(p.id) ?? p.id,
+            characterName: character?.name ?? '',
+            ...(character?.portraitAsset ? { portraitAsset: character.portraitAsset } : {}),
+          };
+        })
         .concat(s ? [] : this.lobby.map((p) => ({ id: p.id, name: p.name, characterName: '' }))),
       suspects: this.pack.suspects.map(({ id, name, publicBio, portraitAsset }) => ({
         id,

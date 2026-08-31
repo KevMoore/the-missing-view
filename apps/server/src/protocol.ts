@@ -67,7 +67,12 @@ export interface ScreenView {
   /** The theme's tracks; the big screen is the room's only speaker. */
   music?: Music;
   victim?: { name: string; portraitAsset?: string };
-  players: { id: string; name: string; characterName: string }[];
+  /**
+   * The room's own cast. The portrait is here so the big screen can put a face
+   * against a contribution — the paintings existed and only the phone that owned
+   * one ever saw it.
+   */
+  players: { id: string; name: string; characterName: string; portraitAsset?: string }[];
   suspects: PublicSuspect[];
   board: (TabledClue & { title: string; text: string; byName: string })[];
   theories: (Theory & { byName: string })[];
