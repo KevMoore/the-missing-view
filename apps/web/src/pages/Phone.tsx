@@ -181,6 +181,9 @@ function Dossier({ view, send }: { view: PhoneView; send: Send }) {
       <p className="muted small mb">Only you hold these. The team can’t use what it can’t see.</p>
       {view.hand.map((clue) => (
         <div className={`card ${clue.tabled ? 'tabled' : ''}`} key={clue.id}>
+          {clue.imageAsset !== undefined && (
+            <img className="evidence-plate phone" src={clue.imageAsset} alt="" aria-hidden />
+          )}
           <h3>{clue.title}</h3>
           <p>{clue.text}</p>
           {clue.tabled ? (

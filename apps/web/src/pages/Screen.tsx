@@ -115,9 +115,10 @@ export function Screen() {
   const [muted, setMuted] = useState(() => sessionStorage.getItem('tmv-muted') === '1');
   const short = useShortScreen();
   const cast = useMemo(() => new Map((view?.players ?? []).map((p) => [p.id, p])), [view?.players]);
+  // One full card, always: with a painting on it, two will not fit anywhere.
   const caps = short
-    ? { questions: 2, theories: 2, boardFull: 1, boardSlim: 4 }
-    : { questions: 3, theories: 3, boardFull: 2, boardSlim: 7 };
+    ? { questions: 2, theories: 3, boardFull: 1, boardSlim: 3 }
+    : { questions: 3, theories: 5, boardFull: 1, boardSlim: 7 };
 
   // The menu theme carries the lobby; play drops it under the room's talking.
   const cue: MusicCue = !joined
@@ -343,7 +344,7 @@ export function Screen() {
         </div>
       )}
 
-      <div className="grid-2">
+      <div className="act-columns">
         <section>
           <div className="deco-rule">The suspects</div>
           <div className="suspect-grid mb">
@@ -385,9 +386,12 @@ export function Screen() {
         </section>
 
         <section>
+          <div className="deco-rule">Theories</div>
+          {view.theories.length === 0 && (
+            <p className="muted small">No theory yet. What do you think happened?</p>
+          )}
           {view.theories.length > 0 && (
             <>
-              <div className="deco-rule">Theories</div>
               {latest(view.theories, caps.theories).map((t) => (
                 <div
                   className={`card fade-up${theories.arrived.has(t.id) ? ' just-in' : ''}${
@@ -412,6 +416,9 @@ export function Screen() {
               />
             </>
           )}
+        </section>
+
+        <section>
           <div className="deco-rule">The evidence board</div>
           {view.board.length === 0 && (
             <p className="muted small">Nothing tabled yet. What are you all holding?</p>
@@ -421,9 +428,12 @@ export function Screen() {
           <div className="board-list">
             {latest(view.board, caps.boardFull).map((c) => (
               <div
-                className={`card fade-up${board.arrived.has(c.clueId) ? ' just-in' : ''}`}
+                className={`card evidence fade-up${board.arrived.has(c.clueId) ? ' just-in' : ''}`}
                 key={c.clueId}
               >
+                {c.imageAsset !== undefined && (
+                  <img className="evidence-plate" src={c.imageAsset} alt="" aria-hidden />
+                )}
                 <h3>{c.title}</h3>
                 <p>{c.text}</p>
                 <div className="byline">

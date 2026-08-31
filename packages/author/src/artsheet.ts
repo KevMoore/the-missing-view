@@ -18,7 +18,17 @@ export interface ArtPrompt {
   prompt: string;
 }
 
-export function artSheet(pack: CasePack, prompts: ArtPrompt[]): string {
+export interface EvidencePrompt {
+  clueId: string;
+  title: string;
+  prompt: string;
+}
+
+export function artSheet(
+  pack: CasePack,
+  prompts: ArtPrompt[],
+  evidence: EvidencePrompt[] = [],
+): string {
   const lines: string[] = [
     `# ${pack.title} — art sheet`,
     '',
@@ -35,7 +45,7 @@ export function artSheet(pack: CasePack, prompts: ArtPrompt[]): string {
     'given below — the case already points at it.',
     '',
     '```bash',
-    `mkdir -p apps/web/public/art/${pack.id}/cast`,
+    `mkdir -p apps/web/public/art/${pack.id}/{cast,evidence}`,
     'sips -s format jpeg -s formatOptions 82 -Z 768 <in>.png --out <path below>',
     '```',
     '',
@@ -67,6 +77,32 @@ export function artSheet(pack: CasePack, prompts: ArtPrompt[]): string {
       `Save to: \`apps/web/public/art/${pack.id}/cast/${p.suspectId}.jpg\``,
       '',
     );
+  }
+
+  if (evidence.length > 0) {
+    lines.push(
+      '## The evidence',
+      '',
+      'Same settings, category `item` — or `prop` for a clue that is a place rather',
+      'than an object. Anything written in these must be **illegible**: the words are',
+      'on the screen beside the picture, and a rendered receipt that shows its own',
+      'readable figures will sooner or later contradict the case.',
+      '',
+    );
+    for (const e of evidence) {
+      lines.push(
+        `### ${e.title}`,
+        '',
+        `**Prompt** (${String(e.prompt.length)} chars):`,
+        '',
+        '```',
+        e.prompt,
+        '```',
+        '',
+        `Save to: \`apps/web/public/art/${pack.id}/evidence/${e.clueId}.jpg\``,
+        '',
+      );
+    }
   }
 
   const victim = pack.victim;

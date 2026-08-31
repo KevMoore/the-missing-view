@@ -38,7 +38,7 @@ console.log(
     `${String(skeleton.clues.filter((c) => c.probative).length)} of them probative.`,
 );
 
-const { pack, issues, attempts, art } = await draftCase({
+const { pack, issues, attempts, art, evidenceArt } = await draftCase({
   skeleton,
   brief,
   ...(blackwoodHall.theme ? { theme: blackwoodHall.theme } : {}),
@@ -75,7 +75,7 @@ const artOut = out.replace(/\.ts$/, '.art.md');
 try {
   mkdirSync(dirname(out), { recursive: true });
   writeFileSync(out, serialiseCase(pack, brief, exportName));
-  writeFileSync(artOut, artSheet(pack, art));
+  writeFileSync(artOut, artSheet(pack, art, evidenceArt));
 } catch (err) {
   const rescue = resolve(repoRoot, `drafted-${pack.id}.json`);
   writeFileSync(rescue, JSON.stringify({ brief, pack, art }, null, 2));
@@ -86,7 +86,9 @@ try {
 
 console.log(`\n"${pack.title}" — validator clean after ${String(attempts)} attempt(s).`);
 console.log(`Written to ${out}`);
-console.log(`Art sheet   ${artOut} — ${String(art.length + 1)} portraits to generate`);
+console.log(
+  `Art sheet   ${artOut} — ${String(art.length + 1)} portraits and ${String(evidenceArt.length)} pieces of evidence to generate`,
+);
 console.log('\nIt is drafted, not published. Read it, then register it in the server to play it.');
 
 // Belt and braces: prove what we wrote still validates, not merely what we held.

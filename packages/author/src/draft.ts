@@ -41,6 +41,8 @@ export interface DraftResult {
   attempts: number;
   /** Portrait prompts for the cast the model actually wrote. */
   art: { suspectId: string; name: string; prompt: string }[];
+  /** And a painted study for each piece of evidence. */
+  evidenceArt: { clueId: string; title: string; prompt: string }[];
 }
 
 const HOUSE_STYLE = [
@@ -90,7 +92,7 @@ export async function draftCase(opts: DraftOptions): Promise<DraftResult> {
       '',
       describeSkeleton(skeleton),
     ].join('\n'),
-  })) as unknown as { clues: { title: string; text: string }[] };
+  })) as unknown as { clues: Written[] };
 
   // 3. Each suspect's sheet, written from their own side of the evidence. The
   //    culprit's sheet gets a denial and never a confession (D13).
@@ -132,7 +134,9 @@ export async function draftCase(opts: DraftOptions): Promise<DraftResult> {
     ].join('\n'),
   })) as unknown as DressingDraft;
 
-  let filled = assemble(opts, cast, clues.clues, knowledge, dressing);
+  // The written clues as they currently stand — replaced wholesale by a repair.
+  let written: Written[] = clues.clues;
+  let filled = assemble(opts, cast, written, knowledge, dressing);
   let pack = applySkeleton(skeleton, filled);
   let issues = validateCase(pack);
   let attempts = 1;
@@ -154,8 +158,9 @@ export async function draftCase(opts: DraftOptions): Promise<DraftResult> {
         '',
         describeSkeleton(skeleton),
       ].join('\n'),
-    })) as unknown as { clues: { title: string; text: string }[] };
-    filled = assemble(opts, cast, repaired.clues, knowledge, dressing);
+    })) as unknown as { clues: Written[] };
+    written = repaired.clues;
+    filled = assemble(opts, cast, written, knowledge, dressing);
     pack = applySkeleton(skeleton, filled);
     issues = validateCase(pack);
     attempts++;
@@ -166,13 +171,25 @@ export async function draftCase(opts: DraftOptions): Promise<DraftResult> {
     name: s.name,
     prompt: s.portraitPrompt,
   }));
-  return { pack, issues, attempts, art };
+  const evidenceArt = filled.clues.map((c, i) => ({
+    clueId: c.id,
+    title: c.title,
+    prompt: written[i]?.imagePrompt ?? '',
+  }));
+  return { pack, issues, attempts, art, evidenceArt };
+}
+
+/** One clue as the model writes it: the words, and how to paint it. */
+interface Written {
+  title: string;
+  text: string;
+  imagePrompt: string;
 }
 
 function assemble(
   opts: DraftOptions,
   cast: CastDraft,
-  clues: { title: string; text: string }[],
+  clues: Written[],
   knowledge: KnowledgeDraft,
   dressing: DressingDraft,
 ): FilledCase {
@@ -232,7 +249,13 @@ function assemble(
           : {}),
       },
     })) as FilledCase['acts'],
-    clues: clues.map((c, i) => ({ id: `c${String(i + 1)}`, title: c.title, text: c.text })),
+    clues: clues.map((c, i) => ({
+      id: `c${String(i + 1)}`,
+      title: c.title,
+      text: c.text,
+      // The file the art step will write. Harmless until it exists.
+      imageAsset: `/art/${id}/evidence/c${String(i + 1)}.jpg`,
+    })),
     solution: dressing.solution,
   };
 }

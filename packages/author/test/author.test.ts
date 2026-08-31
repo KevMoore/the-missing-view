@@ -52,6 +52,8 @@ const goodClues = {
       c.exonerates.length > 0
         ? `A record placing others elsewhere. It rules out ${String(c.exonerates.length)} of them.`
         : 'A small object, out of place.',
+    imagePrompt:
+      'Oil still life on dark wood, a small object out of place. Warm lamplight, deep umber shadow, fills whole frame, no white background',
   })),
 };
 
@@ -181,7 +183,11 @@ describe('drafting', () => {
       // the complaint and fixes it.
       if (call === 1) {
         const bad = structuredClone(goodClues);
-        bad.clues[0] = { title: 'A Note', text: 'Signed by Person 3, left on the stair.' };
+        bad.clues[0] = {
+          title: 'A Note',
+          text: 'Signed by Person 3, left on the stair.',
+          imagePrompt: 'Oil still life on dark wood, a folded note. No white background',
+        };
         return Promise.resolve(bad);
       }
       expect(input).toContain('act1-spoiler');
@@ -284,5 +290,34 @@ describe('the art sheet', () => {
     const inFences = [...sheet.matchAll(/```\n([^`]+)\n```/g)].map((m) => m[1]!);
     for (const p of inFences.filter((t) => t.startsWith('Oil portrait')))
       expect(p.length).toBeLessThanOrEqual(200);
+  });
+});
+
+describe('the evidence art', () => {
+  it('orders a painted study per clue, on the path the case points at', async () => {
+    const { model } = stubModel({
+      cast: cast(skeleton.suspectCount),
+      clues: goodClues,
+      knowledge,
+      dressing,
+    });
+    const { pack, art, evidenceArt } = await draftCase({
+      skeleton,
+      brief: 'a Cornish lighthouse',
+      characters: DECO_1920S_CHARACTERS,
+      model,
+    });
+    expect(evidenceArt).toHaveLength(pack.clues.length);
+    for (const [i, clue] of pack.clues.entries()) {
+      expect(clue.imageAsset).toBe(`/art/${pack.id}/evidence/${clue.id}.jpg`);
+      expect(evidenceArt[i]?.clueId).toBe(clue.id);
+      expect(evidenceArt[i]?.prompt.length, clue.id).toBeLessThanOrEqual(200);
+    }
+
+    const sheet = artSheet(pack, art, evidenceArt);
+    expect(sheet).toContain('## The evidence');
+    expect(sheet).toContain('must be **illegible**');
+    for (const clue of pack.clues)
+      expect(sheet).toContain(`art/${pack.id}/evidence/${clue.id}.jpg`);
   });
 });

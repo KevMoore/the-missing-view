@@ -138,6 +138,7 @@ export function applySkeleton(skeleton: Skeleton, filled: FilledCase): CasePack 
       text: written?.text ?? '',
       key: sk.key,
       act: sk.act,
+      ...(written?.imageAsset ? { imageAsset: written.imageAsset } : {}),
       ...(sk.moment ? { moment: sk.moment } : {}),
       ...(sk.implicates.length ? { implicates: sk.implicates.map(suspectId) } : {}),
       ...(sk.exonerates.length ? { exonerates: sk.exonerates.map(suspectId) } : {}),
@@ -185,7 +186,7 @@ export interface FilledCase {
   prologue?: CasePack['prologue'];
   theme?: CasePack['theme'];
   acts: CasePack['acts'];
-  clues: { id: string; title: string; text: string }[];
+  clues: { id: string; title: string; text: string; imageAsset?: string }[];
   solution: {
     motive: string;
     method: string;

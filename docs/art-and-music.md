@@ -10,6 +10,7 @@ one, so a second case in the same theme reuses them and ships only its own cast.
 /art/<theme.id>/scene/*.jpg   backdrops — shared by every case in the theme
 /art/<theme.id>/cast/*.jpg    player characters and suspect shells — shared
 /art/<case.id>/cast/*.jpg     this case's own suspects and victim
+/art/<case.id>/evidence/*.jpg one painted study per clue
 /music/<theme.id>/*.mp3       the theme's music
 ```
 
@@ -114,6 +115,23 @@ Generated with the Autosprite MCP, `generate_asset_preview`, 1 credit each.
   > Oil portrait of a `<woman|man>`, `<age>`, `<role and period>`, `<features>`,
   > `<expression>`. Warm lamplight, umber ground. Rectangular, fills frame, no
   > white
+
+- **Evidence** — category `item`, or `prop` when the clue is a place rather than
+  an object:
+
+  > Oil still life on dark wood, `<object and one telling detail>`. Warm
+  > lamplight, deep umber shadow, fills whole frame, no white background
+
+  A fourth trap, and the worst of them: **anything with writing on it must say
+  "writing blurred illegible"**. Asked for a diary it will render a legible
+  entry of its own invention — the first attempt produced "Met her where the
+  river bends" and initials that were not the culprit's. The words are on the
+  screen beside the picture; a rendered receipt that shows its own figures will
+  contradict the case and mislead the room rather than a suspect doing it.
+
+  Note the tension with trap 2: naming a small object puts it alone on white.
+  Both constraints have to be in the same prompt — lead with "Oil still life on
+  dark wood" and close with "no white background".
 
 - **Scenes** — category `prop`:
 

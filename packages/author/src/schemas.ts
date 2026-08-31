@@ -73,13 +73,23 @@ export const CLUES_SCHEMA = {
       items: {
         type: 'object',
         additionalProperties: false,
-        required: ['title', 'text'],
+        required: ['title', 'text', 'imagePrompt'],
         properties: {
           title: { ...str, description: 'Three or four words, like an exhibit label.' },
           text: {
             ...str,
             description:
               'One to three sentences. A physical object, a record, or something a named person saw.',
+          },
+          imagePrompt: {
+            ...str,
+            description:
+              'A painted study of this evidence, UNDER 200 CHARACTERS. Exact form: "Oil still ' +
+              'life on dark wood, <the object and one telling detail>. Warm lamplight, deep umber ' +
+              'shadow, fills whole frame, no white background". For a clue that is testimony ' +
+              'rather than an object, paint the place instead. If the object carries writing, say ' +
+              '"writing blurred illegible" — a picture that renders its own readable words will ' +
+              'contradict the case and mislead the room.',
           },
         },
       },

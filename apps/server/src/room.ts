@@ -405,6 +405,7 @@ export class Room {
           title: clue?.title ?? '',
           text: clue?.text ?? '',
           byName: names.get(t.by) ?? t.by,
+          ...(clue?.imageAsset ? { imageAsset: clue.imageAsset } : {}),
         };
       }),
       theories: (s?.theories ?? []).map((t) => ({ ...t, byName: names.get(t.by) ?? t.by })),
@@ -483,7 +484,13 @@ export class Room {
       },
       hand: (player?.hand ?? []).map((id) => {
         const clue = clueById.get(id);
-        return { id, title: clue?.title ?? '', text: clue?.text ?? '', tabled: tabled.has(id) };
+        return {
+          id,
+          title: clue?.title ?? '',
+          text: clue?.text ?? '',
+          tabled: tabled.has(id),
+          ...(clue?.imageAsset ? { imageAsset: clue.imageAsset } : {}),
+        };
       }),
       players: this.lobby.filter((p) => p.id !== playerId).map((p) => ({ id: p.id, name: p.name })),
       suspects: this.pack.suspects.map(({ id, name, publicBio, portraitAsset }) => ({

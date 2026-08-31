@@ -1145,3 +1145,68 @@ a:hover {
   font-family: var(--serif);
   color: var(--cream);
 }
+
+/* ---- the act, in three columns ---- */
+
+/*
+ * Who they are, what they think, what they have. The board and the theories
+ * shared one column and the evidence had no room for a picture; separating them
+ * gives each a full width and lets the paintings be big enough to read across a
+ * room. Folds to two columns and then to one, so a laptop and a phone both get
+ * something sensible rather than three slivers.
+ */
+.act-columns {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr 1.05fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+/* An iPad in landscape is the big screen in most rooms, so it keeps all three
+   columns: two would make each one twice as tall, and a screen has no scrollbar. */
+@media (max-width: 900px) {
+  .act-columns {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 820px) {
+  .act-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* The painted study of a piece of evidence. */
+.card.evidence {
+  padding: 0;
+  overflow: hidden;
+}
+.card.evidence h3,
+.card.evidence p,
+.card.evidence .byline {
+  padding-left: 0.9rem;
+  padding-right: 0.9rem;
+}
+.card.evidence h3 {
+  padding-top: 0.7rem;
+}
+.card.evidence .byline {
+  padding-bottom: 0.7rem;
+}
+.evidence-plate {
+  display: block;
+  width: 100%;
+  /* Sized against the viewport, not a fixed ratio: a screen has no scrollbar,
+     so a picture that grows with the column pushes the words off the bottom. */
+  height: clamp(80px, 13vh, 180px);
+  object-fit: cover;
+  object-position: center 45%;
+  border-bottom: 1px solid var(--panel-edge);
+}
+
+/* A phone has a scrollbar, so the picture may take a proper share of the card. */
+.evidence-plate.phone {
+  height: auto;
+  aspect-ratio: 16 / 9;
+  margin: -0.9rem -1rem 0.7rem;
+  width: calc(100% + 2rem);
+  border-bottom: 1px solid var(--panel-edge);
+}

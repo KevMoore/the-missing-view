@@ -228,6 +228,16 @@ export interface Clue {
   /** Which team moment this clue is designed to trigger, if any. */
   moment?: TeamMoment;
   /**
+   * A painted study of the evidence, for the big screen. Optional: a case with
+   * none still plays, the board is simply text.
+   *
+   * Anything written in the picture must be **illegible**. The words are on the
+   * screen beside it; a generated receipt that renders its own readable figures
+   * will sooner or later contradict the case, and a player who reads it will be
+   * misled by the game rather than by a suspect.
+   */
+  imageAsset?: string;
+  /**
    * Who this clue points at. Narrative only — it is the `exonerates` list below
    * that does the logical work.
    */

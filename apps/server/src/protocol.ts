@@ -74,7 +74,7 @@ export interface ScreenView {
    */
   players: { id: string; name: string; characterName: string; portraitAsset?: string }[];
   suspects: PublicSuspect[];
-  board: (TabledClue & { title: string; text: string; byName: string })[];
+  board: (TabledClue & { title: string; text: string; byName: string; imageAsset?: string })[];
   theories: (Theory & { byName: string })[];
   questions: (SuspectQuestion & {
     byName: string;
@@ -122,7 +122,7 @@ export interface PhoneView {
   phase: Phase;
   act: 1 | 2 | 3;
   character: { name: string; role: string; briefing: string; portraitAsset?: string };
-  hand: { id: string; title: string; text: string; tabled: boolean }[];
+  hand: { id: string; title: string; text: string; tabled: boolean; imageAsset?: string }[];
   players: { id: string; name: string }[];
   suspects: PublicSuspect[];
   theories: (Theory & { byName: string })[];
