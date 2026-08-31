@@ -1563,3 +1563,17 @@ a:hover {
   padding: 0.25rem 1rem;
   margin-right: 1.2rem;
 }
+
+/* A player the house has stopped waiting for (D41). Dimmed, not removed: the
+   room should be able to see that somebody was left out. */
+.rows li.stood-down {
+  opacity: 0.5;
+}
+.rows li.stood-down .tag {
+  color: var(--cream-dim);
+}
+/* A control that sits on a row rather than under it. */
+.small-btn {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.65rem;
+}

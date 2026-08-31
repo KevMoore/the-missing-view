@@ -14,7 +14,8 @@ December 1926. 4–8 players, three acts, about an hour.
 
 **One house.** Four to eight players, one investigation. The accusation is the
 house's: every player commits to a name, and it locks only when they all commit
-to the same one (D36).
+to the same one (D36). If a phone dies mid-accusation the facilitator can let
+the house accuse without it — but only while that player is actually gone (D41).
 
 **Two houses, head to head.** Eight to sixteen. The facilitator splits them and
 casts them; each house gets the same case, its own deal, and its own big screen,

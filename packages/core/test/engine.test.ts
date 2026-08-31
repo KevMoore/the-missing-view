@@ -5,6 +5,7 @@ import {
   applyMove,
   computeCounters,
   createGame,
+  excusePlayer,
   headlineStrength,
   type GameState,
 } from '../src/index.js';
@@ -172,6 +173,49 @@ describe('moves', () => {
     for (const id of ['p1', 'p2', 'p3'])
       g = applyMove(pack, g, { type: 'accuse-commit', playerId: id, culpritId: 's2' }, 7000);
     expect(g.accusation?.committedBy).toEqual(['p1', 'p2', 'p3']);
+  });
+
+  it('lets the house accuse without a player who has gone', () => {
+    let g = toActThree(started());
+    for (const id of ['p1', 'p2', 'p3', 'p4'])
+      g = applyMove(pack, g, { type: 'accuse-commit', playerId: id, culpritId: 's2' }, 7000);
+    expect(g.accusation, 'four of five is not the house').toBeUndefined();
+
+    // p5's phone has died. Unanimity counts everybody, so without this the
+    // house can never accuse — and the game records a room that never decided.
+    g = excusePlayer(pack, g, 'p5', true, 7100);
+    expect(g.accusation?.culpritId).toBe('s2');
+    expect(g.accusation?.committedBy, 'the absent player was credited').toEqual([
+      'p1',
+      'p2',
+      'p3',
+      'p4',
+    ]);
+  });
+
+  it('waits again for a player who is put back in the count', () => {
+    let g = toActThree(started());
+    g = excusePlayer(pack, g, 'p5', true, 7100);
+    g = excusePlayer(pack, g, 'p5', false, 7100);
+    for (const id of ['p1', 'p2', 'p3', 'p4'])
+      g = applyMove(pack, g, { type: 'accuse-commit', playerId: id, culpritId: 's2' }, 7000);
+    expect(g.accusation).toBeUndefined();
+  });
+
+  it('drops the half-made choice of a player it stops waiting for', () => {
+    let g = toActThree(started());
+    g = applyMove(pack, g, { type: 'accuse-commit', playerId: 'p5', culpritId: 's1' }, 7000);
+    g = excusePlayer(pack, g, 'p5', true, 7100);
+    expect(g.accusationVotes.p5, 'an absent player still voted').toBeUndefined();
+    for (const id of ['p1', 'p2', 'p3', 'p4'])
+      g = applyMove(pack, g, { type: 'accuse-commit', playerId: id, culpritId: 's2' }, 7010);
+    expect(g.accusation?.culpritId).toBe('s2');
+  });
+
+  it('will not excuse anybody once the house has accused', () => {
+    let g = toActThree(started());
+    g = commitAll(g, 's2', 7000);
+    expect(() => excusePlayer(pack, g, 'p5', true, 7100)).toThrow(IllegalMove);
   });
 
   it('refuses a name that is not a suspect', () => {

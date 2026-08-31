@@ -449,7 +449,24 @@ export function Console() {
                   <span className="muted small"> · {p.characterName}</span>
                 )}
                 {p.bot && <span className="muted small"> · AI</span>}
+                {p.excused === true && <span className="muted small"> · stood down</span>}
               </span>
+              {/* The accusation waits for everybody (D36), so one dead phone in
+                  act 3 stops a house that has already agreed out loud. Offered
+                  only for somebody the server can see has gone: a person who is
+                  here and disagreeing has a live socket, and talking over them
+                  is the thing the mechanic exists to prevent. */}
+              {!p.bot && !p.connected && phase !== 'reveal' && !view?.accusationMade && (
+                <button
+                  className="ghost small-btn"
+                  title={`${p.name}’s phone has gone. The house can accuse without them.`}
+                  onClick={() => {
+                    send({ type: 'excuse', playerId: p.id, excused: p.excused !== true });
+                  }}
+                >
+                  {p.excused === true ? 'Wait for them again' : 'Accuse without them'}
+                </button>
+              )}
               {view?.mode === 'two-houses' && (
                 <span className="muted small">
                   {view.houses.find((h) => h.id === p.houseId)?.name ?? '—'}

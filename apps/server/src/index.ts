@@ -307,6 +307,11 @@ wss.on('connection', (socket: WebSocket) => {
             room.pushViews();
             return;
           }
+          case 'excuse': {
+            if (!room || client?.role !== 'console') throw new IllegalMove('facilitator only');
+            room.excuse(msg.playerId, msg.excused);
+            return;
+          }
           case 'assign': {
             if (!room || client?.role !== 'console') throw new IllegalMove('facilitator only');
             room.assign(msg.playerId, msg.houseId, msg.characterId);

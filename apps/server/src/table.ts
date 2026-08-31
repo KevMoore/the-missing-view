@@ -17,6 +17,7 @@ import {
   applyFacilitator,
   applyMove,
   createGame,
+  excusePlayer,
   IllegalMove,
   type CasePack,
   type FacilitatorAction,
@@ -128,6 +129,12 @@ export class Table {
     if (this.state.phase === 'reveal' && !this.reveal)
       this.reveal = await buildReveal(this.pack, this.state, this.bots.ids);
     this.nudge = null;
+  }
+
+  /** Stop waiting on a player, or start again (D41). Guarded by the Room. */
+  excuse(playerId: string, excused: boolean, at = Date.now()): void {
+    if (!this.state) throw new IllegalMove('game not started');
+    this.state = excusePlayer(this.pack, this.state, playerId, excused, at);
   }
 
   async handleMove(move: Move, at = Date.now()): Promise<void> {

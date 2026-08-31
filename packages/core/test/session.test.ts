@@ -12,11 +12,12 @@ import {
   compareHouses,
   createSession,
   houseSeed,
+  type Seat,
 } from '../src/index.js';
 import { testCase } from './fixtures.js';
 
 const pack = testCase();
-const seats = (prefix: string, n: number) =>
+const seats = (prefix: string, n: number): Seat[] =>
   Array.from({ length: n }, (_, i) => ({
     id: `${prefix}${String(i + 1)}`,
     name: `${prefix}${String(i + 1)}`,

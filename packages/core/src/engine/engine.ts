@@ -44,12 +44,76 @@ export function createGame(
     players,
     board: [],
     accusationVotes: {},
+    excused: [],
     motive: '',
     theories: [],
     questions: [],
     commitments: [],
     log: [],
   };
+}
+
+/**
+ * The house accuses when everyone who can decide has named the same person.
+ *
+ * Kept here rather than inside the commit handler, because committing is not
+ * the only thing that can complete a house: excusing the one player everybody
+ * is waiting for completes it too, and the first version of this rule sealed
+ * nothing in that case (D36, D41).
+ *
+ * Unanimity, not a majority. A majority is a vote, and a vote lets a team
+ * accuse over the head of somebody who disagrees (D8).
+ */
+function seal(pack: CasePack, state: GameState, at: number): GameState {
+  if (state.accusation) return state;
+  const deciding = state.players.filter((p) => !p.bot && !state.excused.includes(p.id));
+  const chosen = deciding.map((p) => state.accusationVotes[p.id]);
+  const first = chosen[0];
+  if (first === undefined || chosen.some((c) => c !== first)) return state;
+  return {
+    ...state,
+    accusation: {
+      culpritId: first,
+      motive: state.motive,
+      committedBy: deciding.map((p) => p.id).sort(),
+      at,
+      correct: first === pack.solution.culpritId,
+    },
+  };
+}
+
+/**
+ * Let the house accuse without somebody, or put them back in the count (D41).
+ *
+ * Unanimity counts everybody, which means one dead phone in act 3 can stop a
+ * house that has already agreed out loud — and the game then records a room
+ * that never decided. This is the way out.
+ *
+ * It does not check whether the player is really gone: only the server knows
+ * that, and only the server may call this. Excusing somebody who is present is
+ * the facilitator talking over them, which is the opposite of D36.
+ */
+export function excusePlayer(
+  pack: CasePack,
+  state: GameState,
+  playerId: string,
+  excused: boolean,
+  at: number,
+): GameState {
+  if (state.accusation) throw new IllegalMove('the house has already accused');
+  if (!state.players.some((p) => p.id === playerId)) throw new IllegalMove('no such player');
+  const without = state.excused.filter((id) => id !== playerId);
+  const next: GameState = {
+    ...state,
+    excused: excused ? [...without, playerId] : without,
+    // A player nobody is waiting for is a player whose half-made choice should
+    // not decide it either.
+    accusationVotes: excused
+      ? Object.fromEntries(Object.entries(state.accusationVotes).filter(([id]) => id !== playerId))
+      : state.accusationVotes,
+  };
+  // The rest of the house may already have agreed and been waiting on this one.
+  return state.act === 3 ? seal(pack, next, at) : next;
 }
 
 /** Apply a player move. Pure: returns a new state, throws IllegalMove on a bad one. */
@@ -149,23 +213,7 @@ export function applyMove(pack: CasePack, state: GameState, move: Move, at: numb
       if (!pack.suspects.some((s) => s.id === move.culpritId))
         throw new IllegalMove(`unknown suspect ${move.culpritId}`);
       next.accusationVotes = { ...state.accusationVotes, [player.id]: move.culpritId };
-
-      // The accusation exists only when everyone who can commit has committed
-      // to the same name. Unanimity, not a majority: a majority is a vote, and
-      // a vote lets a team accuse over the head of somebody who disagrees (D8).
-      const deciding = state.players.filter((p) => !p.bot);
-      const chosen = deciding.map((p) => next.accusationVotes[p.id]);
-      const first = chosen[0];
-      if (first === undefined || chosen.some((c) => c !== first)) return next;
-
-      next.accusation = {
-        culpritId: first,
-        motive: next.motive,
-        committedBy: deciding.map((p) => p.id).sort(),
-        at,
-        correct: first === pack.solution.culpritId,
-      };
-      return next;
+      return seal(pack, next, at);
     }
   }
 }

@@ -224,6 +224,17 @@ export class Room {
     const existing = this.lobby.find((p) => p.id === existingId);
     if (existing) {
       existing.connected = true;
+      // Back in the room, so back in the count. Nobody should have to remember
+      // to undo this, and a house that accused while they were gone has already
+      // accused — excusePlayer refuses to touch a finished game.
+      if (this.started) {
+        try {
+          this.tableOf(existing.id).excuse(existing.id, false);
+        } catch {
+          // The house accused while they were away. Nothing to put back.
+        }
+      }
+      this.pushViews();
       return existing.id;
     }
     if (this.started) throw new IllegalMove('game already started');
@@ -238,6 +249,23 @@ export class Room {
       houseId: houseId ?? this.emptiestTable().id,
     });
     return id;
+  }
+
+  /**
+   * Let the house accuse without a player whose phone has gone (D41).
+   *
+   * Only for somebody the server can see is disconnected. That single condition
+   * is what makes the control safe to hand a facilitator: a person who is in
+   * the room and disagreeing has a live socket, so this refuses — and refusing
+   * is the whole point, because talking over them is what D36 exists to stop.
+   */
+  excuse(playerId: string, excused: boolean): void {
+    const player = this.lobby.find((p) => p.id === playerId);
+    if (!player) throw new IllegalMove('no such player');
+    if (excused && player.connected)
+      throw new IllegalMove(`${player.name} is still connected — the house waits for them`);
+    this.tableOf(playerId).excuse(playerId, excused);
+    this.pushViews();
   }
 
   recordEmail(playerId: string, email: string): void {
@@ -530,7 +558,8 @@ export class Room {
           ? {
               committed: {
                 count: Object.keys(t.state.accusationVotes).length,
-                of: t.state.players.filter((p) => !p.bot).length,
+                of: t.state.players.filter((p) => !p.bot && !t.state?.excused.includes(p.id))
+                  .length,
               },
             }
           : {}),
@@ -607,7 +636,6 @@ export class Room {
     const act = this.actDef(s?.act ?? 1);
     const tabled = new Set((s?.board ?? []).map((t) => t.clueId));
     const commitment = s?.commitments.at(-1);
-    const deciding = (s?.players ?? []).filter((p) => !p.bot);
     return {
       type: 'phone-view',
       playerId,
@@ -665,14 +693,20 @@ export class Room {
         ? {
             accusation: {
               ...(s.accusationVotes[playerId] ? { myChoice: s.accusationVotes[playerId] } : {}),
-              votes: deciding.map((p) => {
-                const choice = s.accusationVotes[p.id];
-                return {
-                  playerId: p.id,
-                  name: names.get(p.id) ?? p.id,
-                  ...(choice ? { culpritId: choice, culpritName: this.suspectName(choice) } : {}),
-                };
-              }),
+              // Everyone who can decide, plus everyone the house has stopped
+              // waiting for — listed rather than dropped, so the room can see
+              // that somebody was left out and say so if it was wrong (D41).
+              votes: s.players
+                .filter((p) => !p.bot)
+                .map((p) => {
+                  const choice = s.accusationVotes[p.id];
+                  return {
+                    playerId: p.id,
+                    name: names.get(p.id) ?? p.id,
+                    ...(s.excused.includes(p.id) ? { excused: true } : {}),
+                    ...(choice ? { culpritId: choice, culpritName: this.suspectName(choice) } : {}),
+                  };
+                }),
               motive: s.motive,
               ...(s.accusation
                 ? { locked: { culpritName: this.suspectName(s.accusation.culpritId) } }
@@ -743,6 +777,7 @@ export class Room {
           moveCount: (table.state?.log ?? []).filter((e) => e.move.playerId === p.id).length,
           bot: this.isBot(p.id),
           ...(p.houseId !== undefined ? { houseId: p.houseId } : {}),
+          ...(table.state?.excused.includes(p.id) === true ? { excused: true } : {}),
           ...(characterId !== undefined
             ? {
                 characterId,

@@ -17,6 +17,9 @@ function game(board: { clueId: string; by: string; at: number }[], log: LoggedMo
     seed: 1,
     phase: 'reveal',
     act: 3,
+    accusationVotes: {},
+    excused: [],
+    motive: '',
     players: [
       { id: 'p1', name: 'Ana', characterId: 'pc-inspector', hand: [] },
       { id: 'p2', name: 'Ben', characterId: 'pc-journalist', hand: [] },

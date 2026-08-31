@@ -63,6 +63,11 @@ export type ClientMessage =
       willChange?: string;
     }
   | { type: 'add-bot'; houseId?: string }
+  /**
+   * Let the house accuse without a player whose phone has gone, or start
+   * waiting for them again (D41). Refused while they are still connected.
+   */
+  | { type: 'excuse'; playerId: string; excused: boolean }
   | { type: 'email-optin'; email: string };
 
 // ---- server -> client views ----
@@ -189,7 +194,14 @@ export interface PhoneView {
   accusation?: {
     myChoice?: string;
     /** Every player who can decide, and what they have committed to. */
-    votes: { playerId: string; name: string; culpritId?: string; culpritName?: string }[];
+    votes: {
+      playerId: string;
+      name: string;
+      culpritId?: string;
+      culpritName?: string;
+      /** The house is accusing without them: their phone has gone (D41). */
+      excused?: boolean;
+    }[];
     motive: string;
     locked?: { culpritName: string };
   };
@@ -215,6 +227,8 @@ export interface ConsoleView {
     bot: boolean;
     /** Where the facilitator has put them. Absent until they are assigned. */
     houseId?: string;
+    /** True while the house is accusing without them (D41). */
+    excused?: boolean;
     characterId?: string;
     characterName?: string;
   }[];

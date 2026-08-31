@@ -27,6 +27,7 @@ function game(over: Partial<GameState> = {}): GameState {
     ],
     board: [],
     accusationVotes: {},
+    excused: [],
     motive: '',
     theories: [],
     questions: [],

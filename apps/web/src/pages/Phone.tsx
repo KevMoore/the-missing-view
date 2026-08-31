@@ -442,8 +442,11 @@ function Decide({ view, send }: { view: PhoneView; send: Send }) {
   if (view.canAccuse && accusation) {
     const mine = accusation.myChoice;
     const others = accusation.votes.filter((v) => v.playerId !== view.playerId);
-    const waiting = accusation.votes.filter((v) => !v.culpritId).length;
-    const split = new Set(accusation.votes.map((v) => v.culpritId).filter(Boolean)).size > 1;
+    // People the house has stopped waiting for are still listed, so the room
+    // can see somebody was left out — but they are not what it is waiting on.
+    const deciding = accusation.votes.filter((v) => v.excused !== true);
+    const waiting = deciding.filter((v) => !v.culpritId).length;
+    const split = new Set(deciding.map((v) => v.culpritId).filter(Boolean)).size > 1;
     return (
       <div className="deco-frame">
         <div className="deco-rule">The house accuses</div>
@@ -508,10 +511,10 @@ function Decide({ view, send }: { view: PhoneView; send: Send }) {
         <div className="deco-rule mt">Where the house stands</div>
         <ul className="rows">
           {others.map((v) => (
-            <li key={v.playerId}>
+            <li key={v.playerId} className={v.excused === true ? 'stood-down' : ''}>
               <span>{v.name}</span>
               <span className={v.culpritId ? 'tag' : 'muted small'}>
-                {v.culpritName ?? 'still deciding'}
+                {v.excused === true ? 'gone — not waited for' : (v.culpritName ?? 'still deciding')}
               </span>
             </li>
           ))}

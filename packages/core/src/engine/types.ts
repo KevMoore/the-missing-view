@@ -82,6 +82,12 @@ export interface GameState {
   board: TabledClue[];
   /** playerId -> the suspect they have committed to. Cleared on withdrawal. */
   accusationVotes: Record<string, string>;
+  /**
+   * Players the house may accuse without, because their phone has gone (D41).
+   * Set by the facilitator and only for somebody already disconnected, so it
+   * cannot be used to talk over a person who is present and disagreeing.
+   */
+  excused: string[];
   /** The motive the room agreed, written by anyone before it locks. */
   motive: string;
   theories: Theory[];
