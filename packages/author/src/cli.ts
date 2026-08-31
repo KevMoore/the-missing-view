@@ -6,7 +6,9 @@
  * for a human to read. It never publishes: registering the case in the server's
  * `cases` map is a deliberate, separate act (D14).
  */
-import { writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { dirname, isAbsolute, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { blackwoodHall, validateCase, DECO_1920S_CHARACTERS } from '@tmv/core';
 import { draftCase } from './draft.js';
 import { extractSkeleton } from './skeleton.js';
@@ -55,11 +57,32 @@ if (issues.length > 0) {
 }
 
 const exportName = pack.id.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
-const out = arg('out') ?? `packages/core/src/cases/${pack.id}.ts`;
-writeFileSync(out, serialiseCase(pack, brief, exportName));
 
+// Anchored to this file, not the shell's working directory. pnpm runs this from
+// inside the package and a person runs it from the repo root, and a relative
+// path threw away four model calls' worth of work the first time it was used.
+const repoRoot = fileURLToPath(new URL('../../..', import.meta.url));
+const asked = arg('out');
+const out = asked
+  ? isAbsolute(asked)
+    ? asked
+    : resolve(process.cwd(), asked)
+  : resolve(repoRoot, 'packages/core/src/cases', `${pack.id}.ts`);
 const artOut = out.replace(/\.ts$/, '.art.md');
-writeFileSync(artOut, artSheet(pack, art));
+
+// Write before anything else can fail. A drafted case is minutes of model time
+// and real money; it does not get lost because a later line threw.
+try {
+  mkdirSync(dirname(out), { recursive: true });
+  writeFileSync(out, serialiseCase(pack, brief, exportName));
+  writeFileSync(artOut, artSheet(pack, art));
+} catch (err) {
+  const rescue = resolve(repoRoot, `drafted-${pack.id}.json`);
+  writeFileSync(rescue, JSON.stringify({ brief, pack, art }, null, 2));
+  console.error(`\nCould not write to ${out}: ${String(err)}`);
+  console.error(`The draft itself is safe at ${rescue} — it does not need generating again.`);
+  process.exit(1);
+}
 
 console.log(`\n"${pack.title}" — validator clean after ${String(attempts)} attempt(s).`);
 console.log(`Written to ${out}`);

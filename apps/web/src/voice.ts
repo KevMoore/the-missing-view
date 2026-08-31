@@ -1,66 +1,132 @@
 /**
- * The suspects, out loud, on the big screen.
+ * The interrogation, out loud, on the big screen.
  *
- * Same rule as the score (D-music): the screen is the room's only speaker, so
- * this runs on that surface alone. Replies are spoken strictly in the order
- * they were answered — two suspects talking over each other is worse than
- * silence — and the score ducks underneath whoever is speaking.
+ * Same rule as the score: the screen is the room's only speaker, so this runs
+ * on that surface alone, and the score ducks underneath whoever is speaking.
  *
- * The written answer is already on the screen before any of this begins, so a
- * missing or refused voice costs the room nothing.
+ * The unit here is the **exchange**, not the line. A question and its answer
+ * are made at different moments — the question the instant it is asked, the
+ * answer once the model has written it — so a queue that simply appended each
+ * new recording played the first question, then the second question, then the
+ * first answer, whenever the room asked faster than the model could reply. A
+ * busy interrogation came out shuffled.
+ *
+ * Playback now walks the questions in the order they were asked and plays each
+ * one through before starting the next, waiting for a piece that has not
+ * arrived rather than stepping over it. It waits only so long: a recording that
+ * never comes must not silence every exchange behind it.
+ *
+ * The written text is on screen throughout, so a missing voice costs the room
+ * nothing but the sound of it.
  */
 import { useEffect, useRef } from 'react';
 import { setDucked } from './music.js';
 import { speak, stopSpeaking } from './speaker.js';
 
-/** Autoplay is refused until the page has been gestured at; the stage-take covers us. */
+export interface Exchange {
+  id: string;
+  /** The question, in the asker's character voice. */
+  askUrl?: string | undefined;
+  /** The suspect's reply. */
+  voiceUrl?: string | undefined;
+}
+
+/**
+ * How long to hold an exchange open for a recording that has not arrived. Long
+ * enough for the model to write a reply and for that reply to be spoken; short
+ * enough that one failure does not mute the rest of the act.
+ */
+const WAIT_FOR_MISSING_MS = 25_000;
+
 export function useSuspectVoices(
-  urls: readonly string[],
+  exchanges: readonly Exchange[],
   enabled: boolean,
   isMuted: boolean,
 ): void {
-  const played = useRef(new Set<string>());
-  const queue = useRef<string[]>([]);
-  const speaking = useRef(false);
+  // The driver is a loop, not a render, so its state lives in refs.
+  const live = useRef<readonly Exchange[]>(exchanges);
+  live.current = exchanges;
 
-  // Muting the screen must silence a line already in flight, not just the score.
+  const askedFor = useRef(new Set<string>());
+  const answered = useRef(new Set<string>());
+  const speaking = useRef(false);
+  const waitingSince = useRef(new Map<string, number>());
+  const timer = useRef<number | undefined>(undefined);
+  const pump = useRef<() => void>(() => undefined);
+
   useEffect(() => {
     if (isMuted) {
       stopSpeaking();
-      queue.current = [];
       speaking.current = false;
       setDucked('suspect-voice', false);
     }
   }, [isMuted]);
 
-  useEffect(() => {
-    if (!enabled || isMuted) return;
-
-    for (const url of urls) {
-      if (played.current.has(url)) continue;
-      played.current.add(url);
-      queue.current.push(url);
+  pump.current = () => {
+    if (speaking.current || !enabled || isMuted) return;
+    if (timer.current !== undefined) {
+      window.clearTimeout(timer.current);
+      timer.current = undefined;
     }
 
-    const next = (): void => {
-      const url = queue.current.shift();
-      if (url === undefined) {
-        speaking.current = false;
-        setDucked('suspect-voice', false);
-        return;
-      }
+    const play = (url: string, mark: () => void) => {
+      mark();
       speaking.current = true;
       setDucked('suspect-voice', true);
-      // Resolves on end, on failure, or immediately if audio was never
-      // unlocked — a line that cannot play must not strand the queue behind it.
-      void speak(url).then(next);
+      void speak(url).then(() => {
+        speaking.current = false;
+        pump.current();
+      });
     };
 
-    if (!speaking.current) next();
-  }, [urls, enabled, isMuted]);
+    /** Hold this exchange open a little longer, then come back and give up. */
+    const hold = (key: string): boolean => {
+      const since = waitingSince.current.get(key) ?? Date.now();
+      waitingSince.current.set(key, since);
+      const left = WAIT_FOR_MISSING_MS - (Date.now() - since);
+      if (left <= 0) return false;
+      timer.current = window.setTimeout(
+        () => {
+          pump.current();
+        },
+        Math.min(left, 1500),
+      );
+      return true;
+    };
+
+    for (const exchange of live.current) {
+      if (!askedFor.current.has(exchange.id)) {
+        if (exchange.askUrl !== undefined) {
+          play(exchange.askUrl, () => askedFor.current.add(exchange.id));
+          return;
+        }
+        // Wait for the question's recording — but only for this exchange, and
+        // only for a while, or one failure stalls the whole act behind it.
+        if (hold(`ask-${exchange.id}`)) return;
+        askedFor.current.add(exchange.id);
+      }
+
+      if (!answered.current.has(exchange.id)) {
+        if (exchange.voiceUrl !== undefined) {
+          play(exchange.voiceUrl, () => answered.current.add(exchange.id));
+          return;
+        }
+        if (hold(exchange.id)) return;
+        answered.current.add(exchange.id);
+      }
+    }
+
+    setDucked('suspect-voice', false);
+  };
+
+  // Re-drive whenever a recording arrives, or the room joins, or muting changes.
+  useEffect(() => {
+    pump.current();
+  }, [exchanges, enabled, isMuted]);
 
   useEffect(
     () => () => {
+      if (timer.current !== undefined) window.clearTimeout(timer.current);
       stopSpeaking();
       setDucked('suspect-voice', false);
     },

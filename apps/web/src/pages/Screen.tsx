@@ -127,17 +127,19 @@ export function Screen() {
         : 'game';
   useMusic(cue, muted, view?.music);
 
-  // The suspects speak here and nowhere else, for the same reason the score
-  // does. Question before reply, in the order they were asked — the queue plays
-  // this list strictly in turn, so the order here is the order the room hears.
-  const voiceUrls = useMemo(
+  // Whole exchanges, in the order they were asked. The recordings for one
+  // question arrive at different times, so what is handed over is the shape of
+  // the interrogation rather than a list of files.
+  const exchanges = useMemo(
     () =>
-      (view?.questions ?? []).flatMap((q) =>
-        [q.askUrl, q.voiceUrl].filter((u): u is string => Boolean(u)),
-      ),
+      (view?.questions ?? []).map((q) => ({
+        id: q.id,
+        askUrl: q.askUrl,
+        voiceUrl: q.voiceUrl,
+      })),
     [view?.questions],
   );
-  useSuspectVoices(voiceUrls, joined, muted);
+  useSuspectVoices(exchanges, joined, muted);
 
   const { send, connected } = useGameSocket(
     (msg: ServerMessage) => {
