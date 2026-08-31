@@ -5,7 +5,6 @@ import { remaining, useGameSocket, type ScreenView, type ServerMessage } from '.
 import { useMusic, type MusicCue } from '../music.js';
 import { useSuspectVoices } from '../voice.js';
 import { armSpeechUnlock, unlockSpeech } from '../speaker.js';
-import { play, setSfxMuted, setSfxSuppressed, unlockSfx } from '../sfx.js';
 import { useArrivals } from '../arrivals.js';
 import { Backdrop } from './Backdrop.js';
 import { Prologue } from './Prologue.js';
@@ -136,21 +135,13 @@ export function Screen() {
     () =>
       (view?.questions ?? []).map((q) => ({
         id: q.id,
+        suspectId: q.suspectId,
         askUrl: q.askUrl,
         voiceUrl: q.voiceUrl,
       })),
     [view?.questions],
   );
-  useSuspectVoices(exchanges, joined, muted);
-
-  // Nothing lands on top of a line: a clue arriving under a suspect's answer is
-  // worse than a clue arriving in silence.
-  useEffect(() => {
-    setSfxMuted(muted);
-  }, [muted]);
-  useEffect(() => {
-    setSfxSuppressed(exchanges.some((e) => e.askUrl !== undefined || e.voiceUrl !== undefined));
-  }, [exchanges]);
+  const answering = useSuspectVoices(exchanges, joined, muted);
 
   const boardSignatures = useMemo(
     () => Object.fromEntries((view?.board ?? []).map((c) => [c.clueId, c.clueId])),
@@ -166,18 +157,8 @@ export function Screen() {
       ),
     [view?.theories],
   );
-  const board = useArrivals(boardSignatures, view !== null, () => {
-    play('table');
-  });
-  const theories = useArrivals(theorySignatures, view !== null, (id, isNew) => {
-    if (isNew) {
-      play('theory');
-      return;
-    }
-    // Backed or challenged: which of the two moved decides the sound.
-    const t = (view?.theories ?? []).find((x) => x.id === id);
-    play((t?.challengers.length ?? 0) > 0 ? 'challenge' : 'back');
-  });
+  const board = useArrivals(boardSignatures, view !== null);
+  const theories = useArrivals(theorySignatures, view !== null);
 
   const { send, connected } = useGameSocket(
     (msg: ServerMessage) => {
@@ -244,7 +225,6 @@ export function Screen() {
                 // to the element it sees touched, not to the page. Everything
                 // spoken for the rest of the night reuses what this unlocks.
                 unlockSpeech();
-                unlockSfx();
                 const roomCode = codeInput.trim().toUpperCase();
                 sessionStorage.setItem('tmv-screen-room', roomCode);
                 send({ type: 'join', role: 'screen', roomCode });
@@ -340,7 +320,7 @@ export function Screen() {
           <div className="deco-rule">The suspects</div>
           <div className="suspect-grid mb">
             {view.suspects.map((s) => (
-              <div className="suspect" key={s.id}>
+              <div className={`suspect${answering === s.id ? ' speaking' : ''}`} key={s.id}>
                 {s.portraitAsset ? (
                   <img src={s.portraitAsset} alt={s.name} />
                 ) : (

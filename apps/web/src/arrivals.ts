@@ -27,8 +27,6 @@ export interface Arrivals {
  * @param signatures id -> a string that changes when the item does. For a clue
  * that is just its id; for a theory it should fold in the backer and challenger
  * counts, so being backed reads as a change.
- * @param onChange fired once per changed id, for the sound. Not called on the
- * first sighting.
  */
 export function useArrivals(
   signatures: Record<string, string>,
@@ -39,14 +37,10 @@ export function useArrivals(
    * as though every clue had just been played.
    */
   ready: boolean,
-  onChange?: (id: string, isNew: boolean) => void,
 ): Arrivals {
   const previous = useRef<Record<string, string> | null>(null);
   const [changed, setChanged] = useState<ReadonlySet<string>>(new Set());
   const [arrived, setArrived] = useState<ReadonlySet<string>>(new Set());
-  const notify = useRef(onChange);
-  notify.current = onChange;
-
   // A stable key, so this runs when the contents move rather than every render.
   const key = Object.entries(signatures)
     .map(([id, sig]) => `${id}=${sig}`)
@@ -65,7 +59,6 @@ export function useArrivals(
     const fresh = moved.filter((id) => !(id in before));
     setChanged(new Set(moved));
     setArrived(new Set(fresh));
-    for (const id of moved) notify.current?.(id, !(id in before));
 
     const timer = window.setTimeout(() => {
       setChanged(new Set());

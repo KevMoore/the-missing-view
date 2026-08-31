@@ -19,12 +19,14 @@
  * The written text is on screen throughout, so a missing voice costs the room
  * nothing but the sound of it.
  */
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { setDucked } from './music.js';
 import { speak, stopSpeaking } from './speaker.js';
 
 export interface Exchange {
   id: string;
+  /** Who is answering, so the room can be shown who is speaking. */
+  suspectId: string;
   /** The question, in the asker's character voice. */
   askUrl?: string | undefined;
   /** The suspect's reply. */
@@ -38,11 +40,16 @@ export interface Exchange {
  */
 const WAIT_FOR_MISSING_MS = 25_000;
 
+/**
+ * @returns the suspect currently answering, or null. A big screen shows five
+ * portraits and plays one voice, and without this the room has to work out
+ * which of the five it is listening to.
+ */
 export function useSuspectVoices(
   exchanges: readonly Exchange[],
   enabled: boolean,
   isMuted: boolean,
-): void {
+): string | null {
   // The driver is a loop, not a render, so its state lives in refs.
   const live = useRef<readonly Exchange[]>(exchanges);
   live.current = exchanges;
@@ -53,11 +60,13 @@ export function useSuspectVoices(
   const waitingSince = useRef(new Map<string, number>());
   const timer = useRef<number | undefined>(undefined);
   const pump = useRef<() => void>(() => undefined);
+  const [answering, setAnswering] = useState<string | null>(null);
 
   useEffect(() => {
     if (isMuted) {
       stopSpeaking();
       speaking.current = false;
+      setAnswering(null);
       setDucked('suspect-voice', false);
     }
   }, [isMuted]);
@@ -69,12 +78,15 @@ export function useSuspectVoices(
       timer.current = undefined;
     }
 
-    const play = (url: string, mark: () => void) => {
+    /** `who` is set only for a reply — a question is the player's, not theirs. */
+    const play = (url: string, mark: () => void, who: string | null) => {
       mark();
       speaking.current = true;
+      setAnswering(who);
       setDucked('suspect-voice', true);
       void speak(url).then(() => {
         speaking.current = false;
+        setAnswering(null);
         pump.current();
       });
     };
@@ -97,7 +109,7 @@ export function useSuspectVoices(
     for (const exchange of live.current) {
       if (!askedFor.current.has(exchange.id)) {
         if (exchange.askUrl !== undefined) {
-          play(exchange.askUrl, () => askedFor.current.add(exchange.id));
+          play(exchange.askUrl, () => askedFor.current.add(exchange.id), null);
           return;
         }
         // Wait for the question's recording — but only for this exchange, and
@@ -108,7 +120,7 @@ export function useSuspectVoices(
 
       if (!answered.current.has(exchange.id)) {
         if (exchange.voiceUrl !== undefined) {
-          play(exchange.voiceUrl, () => answered.current.add(exchange.id));
+          play(exchange.voiceUrl, () => answered.current.add(exchange.id), exchange.suspectId);
           return;
         }
         if (hold(exchange.id)) return;
@@ -116,6 +128,7 @@ export function useSuspectVoices(
       }
     }
 
+    setAnswering(null);
     setDucked('suspect-voice', false);
   };
 
@@ -132,4 +145,6 @@ export function useSuspectVoices(
     },
     [],
   );
+
+  return answering;
 }
