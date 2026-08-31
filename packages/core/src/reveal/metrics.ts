@@ -13,6 +13,7 @@
  */
 import type { CasePack } from '../case/types.js';
 import type { GameState } from '../engine/types.js';
+import { DELIBERATION } from '../engine/types.js';
 import { computeMoments } from './moments.js';
 
 export interface GameMetrics {
@@ -51,7 +52,11 @@ export function computeMetrics(
 ): GameMetrics {
   const moments = computeMoments(pack, state);
   const times = state.log.map((e) => e.at);
-  const counts = state.players.map((p) => state.log.filter((e) => e.move.playerId === p.id).length);
+  // Investigation only. A unanimous accusation is up to eight moves inside a
+  // few seconds, and counting them would tell the facilitator that whoever
+  // tapped fastest dominated the room.
+  const acted = state.log.filter((e) => !DELIBERATION.includes(e.move.type));
+  const counts = state.players.map((p) => acted.filter((e) => e.move.playerId === p.id).length);
   const total = counts.reduce((a, b) => a + b, 0);
   const type = (t: string) => state.log.filter((e) => e.move.type === t).length;
 

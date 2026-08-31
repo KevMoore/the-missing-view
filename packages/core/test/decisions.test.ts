@@ -26,6 +26,8 @@ function game(commitments: CommitmentRecord[], log: LoggedMove[]): GameState {
     act: 3,
     players: ['p1', 'p2', 'p3'].map((id) => ({ id, name: id, characterId: 'c', hand: [] })),
     board: [],
+    accusationVotes: {},
+    motive: '',
     theories: [],
     questions: [],
     commitments,

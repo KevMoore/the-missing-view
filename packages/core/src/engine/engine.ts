@@ -1,22 +1,39 @@
 import type { CasePack } from '../case/types.js';
 import { castCharacters, dealClues } from '../case/deal.js';
-import type { FacilitatorAction, GameState, Move, Player } from './types.js';
+import type { FacilitatorAction, GameState, Move, Player, Seat } from './types.js';
 
 export class IllegalMove extends Error {}
 
-/** Build the opening state: characters cast, act-1 clues dealt (D16). */
+/**
+ * Build the opening state: characters cast, act-1 clues dealt (D16).
+ *
+ * A seat may arrive with a character already on it. The facilitator knows the
+ * people in the room and the game is about how those people work together, so
+ * a deliberate cast beats a random one (D37) — but only where one was made:
+ * every seat left blank is still cast from the pool, around what is taken.
+ */
 export function createGame(
   pack: CasePack,
-  roster: { id: string; name: string }[],
+  roster: Seat[],
   seed: number,
+  /** Characters spoken for elsewhere in the session — the other house (D38). */
+  reserved: readonly string[] = [],
 ): GameState {
   if (roster.length < 4 || roster.length > 8)
     throw new IllegalMove(`player count ${String(roster.length)} outside 4..8`);
   const deal = dealClues(pack, roster.length, seed, 1);
-  const cast = castCharacters(pack.characters, roster.length, seed);
+
+  const assigned = roster.map((p) => p.characterId).filter((c): c is string => c !== undefined);
+  for (const id of assigned)
+    if (!pack.characters.some((c) => c.id === id)) throw new IllegalMove(`unknown character ${id}`);
+  const spare = castCharacters(pack.characters, roster.length, seed, [...assigned, ...reserved]);
+
+  let next = 0;
   const players: Player[] = roster.map((p, i) => ({
-    ...p,
-    characterId: (cast[i] ?? { id: 'unknown' }).id,
+    id: p.id,
+    name: p.name,
+    ...(p.bot === true ? { bot: true } : {}),
+    characterId: p.characterId ?? (spare[next++] ?? { id: 'unknown' }).id,
     hand: deal.hands[i] ?? [],
   }));
   return {
@@ -26,6 +43,8 @@ export function createGame(
     act: 1,
     players,
     board: [],
+    accusationVotes: {},
+    motive: '',
     theories: [],
     questions: [],
     commitments: [],
@@ -112,15 +131,39 @@ export function applyMove(pack: CasePack, state: GameState, move: Move, at: numb
       );
       return next;
     }
-    case 'accuse': {
+    case 'set-motive': {
+      if (state.accusation) throw new IllegalMove('the house has already accused');
+      next.motive = move.text;
+      return next;
+    }
+    case 'accuse-withdraw': {
+      if (state.accusation) throw new IllegalMove('the house has already accused');
+      next.accusationVotes = Object.fromEntries(
+        Object.entries(state.accusationVotes).filter(([id]) => id !== player.id),
+      );
+      return next;
+    }
+    case 'accuse-commit': {
       if (state.act !== 3) throw new IllegalMove('accusation only in act 3');
-      if (state.accusation) throw new IllegalMove('already accused');
+      if (state.accusation) throw new IllegalMove('the house has already accused');
+      if (!pack.suspects.some((s) => s.id === move.culpritId))
+        throw new IllegalMove(`unknown suspect ${move.culpritId}`);
+      next.accusationVotes = { ...state.accusationVotes, [player.id]: move.culpritId };
+
+      // The accusation exists only when everyone who can commit has committed
+      // to the same name. Unanimity, not a majority: a majority is a vote, and
+      // a vote lets a team accuse over the head of somebody who disagrees (D8).
+      const deciding = state.players.filter((p) => !p.bot);
+      const chosen = deciding.map((p) => next.accusationVotes[p.id]);
+      const first = chosen[0];
+      if (first === undefined || chosen.some((c) => c !== first)) return next;
+
       next.accusation = {
-        culpritId: move.culpritId,
-        motive: move.motive,
-        submittedBy: player.id,
+        culpritId: first,
+        motive: next.motive,
+        committedBy: deciding.map((p) => p.id).sort(),
         at,
-        correct: move.culpritId === pack.solution.culpritId,
+        correct: first === pack.solution.culpritId,
       };
       return next;
     }

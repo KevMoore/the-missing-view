@@ -21,6 +21,7 @@
  */
 import type { CasePack, TeamMoment } from '../case/types.js';
 import type { GameState } from '../engine/types.js';
+import { DELIBERATION } from '../engine/types.js';
 
 /** How long the room has to pick something up before we call it missed. */
 const RESPONSE_WINDOW_MS = 3 * 60 * 1000;
@@ -89,7 +90,7 @@ export function computeMoments(pack: CasePack, state: GameState): MomentRecord[]
         e.at > tabled.at &&
         e.at - tabled.at <= RESPONSE_WINDOW_MS &&
         e.move.playerId !== tabled.by &&
-        e.move.type !== 'commit-vote',
+        !DELIBERATION.includes(e.move.type),
     );
 
     byMoment.set(moment, {

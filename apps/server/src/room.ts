@@ -1,29 +1,32 @@
 /**
- * One live game room: authoritative state, connected sockets, role-scoped views.
- * The server owns the rules (D20); clients only render and send intents.
+ * One live session: the case, the sockets, the big screen, and the one or two
+ * houses playing (D38).
+ *
+ * The server owns the rules (D20); clients only render and send intents. What
+ * a house owns is in `Table`; what is here is everything the houses share — the
+ * room code, the lobby, the clients, the prologue, the act clock and the audio.
  */
 import { randomBytes, randomInt } from 'node:crypto';
 import {
+  compareHouses,
   computeMetrics,
+  createSession,
   summariseMetrics,
-  applyFacilitator,
-  applyMove,
-  createGame,
   IllegalMove,
+  MAX_PLAYERS,
+  MAX_SESSION_PLAYERS,
+  MIN_PLAYERS,
   type CasePack,
   type FacilitatorAction,
   type GameState,
+  type HouseResult,
   type Move,
+  type SessionMode,
 } from '@tmv/core';
 import type { ConsoleView, PhoneView, ScreenView, ServerMessage } from './protocol.js';
-import { buildReveal, type RevealBundle } from './reveal.js';
-import { askSuspect, narrate, speakAnswer, speakQuestion } from './llm.js';
-import { BotDriver, type BotOptions } from './bots.js';
-
-/** The closing stretch of an act, where a stalled room is worth prompting. */
-const NUDGE_WINDOW_MS = 5 * 60_000;
-/** How long nothing may happen before the house counts as quiet. */
-const NUDGE_SILENCE_MS = 90_000;
+import { narrate } from './llm.js';
+import { Table } from './table.js';
+import type { BotOptions } from './bots.js';
 
 export interface Client {
   role: 'phone' | 'screen' | 'console';
@@ -35,26 +38,29 @@ interface PendingPlayer {
   id: string;
   name: string;
   connected: boolean;
+  /** Which house. Assigned by the facilitator; defaulted at start. */
+  houseId?: string;
+  /** The character the facilitator chose for them, if they chose one (D37). */
+  characterId?: string;
 }
+
+const DEFAULT_HOUSE_NAMES = ['House One', 'House Two'];
 
 export class Room {
   readonly code: string;
+  readonly mode: SessionMode;
   private readonly pack: CasePack;
-  private state: GameState | null = null;
+  /** Never empty: one house, or two. Typed so `tables[0]` needs no assertion. */
+  private readonly tables: [Table, ...Table[]];
   private readonly lobby: PendingPlayer[] = [];
   private readonly clients = new Set<Client>();
-  private reveal: RevealBundle | null = null;
-  private readonly qaHistory = new Map<string, { question: string; answer: string }[]>();
-  /** Spoken replies by question id. Capped: a long game must not grow without bound. */
+  /** Spoken audio by key. Capped: a long game must not grow without bound. */
   private readonly voices = new Map<string, Buffer>();
   /** True while the opening sequence is on the big screen. */
   private prologuePlaying = false;
-  /** The clue the house is currently being nudged about, and who holds it. */
-  private nudge: { clueId: string; title: string; holder: string } | null = null;
-  /** Acts already nudged, so the room is prompted once rather than nagged. */
-  private readonly nudged = new Set<number>();
   /** Narration generated once per room and reused if it is played again. */
   private narrationReady = false;
+  private started = false;
   /**
    * Random per room, so two games of the same case deal and cast differently.
    * Overridable only so tests can pin a table rather than hope for one — a
@@ -62,74 +68,135 @@ export class Room {
    */
   private readonly seed: number;
   private readonly emails: { playerId: string; email: string }[] = [];
-  private readonly bots: BotDriver;
 
-  constructor(pack: CasePack, botOptions: BotOptions & { seed?: number } = {}) {
+  constructor(pack: CasePack, botOptions: BotOptions & { seed?: number; mode?: SessionMode } = {}) {
     this.seed = botOptions.seed ?? randomInt(1, 2 ** 31);
     this.pack = pack;
+    this.mode = botOptions.mode ?? 'one-house';
     this.code = randomBytes(3).toString('hex').toUpperCase(); // 6 hex chars, unguessable enough for a room (D21)
-    this.bots = new BotDriver(this, pack, botOptions);
+    const host = {
+      seat: (name: string, houseId: string) => this.joinPlayer(name, undefined, houseId),
+      changed: () => {
+        this.pushViews();
+      },
+      putVoice: (key: string, audio: Buffer) => {
+        this.putVoice(key, audio);
+      },
+      hasVoice: (key: string) => this.voices.has(key),
+    };
+    const house = (i: number) =>
+      new Table(
+        `h${String(i + 1)}`,
+        DEFAULT_HOUSE_NAMES[i] ?? `House ${String(i + 1)}`,
+        pack,
+        host,
+        botOptions,
+      );
+    this.tables = this.mode === 'two-houses' ? [house(0), house(1)] : [house(0)];
   }
 
+  /** How many people this room can hold — a full house, or two of them. */
+  get capacity(): number {
+    return this.mode === 'two-houses' ? MAX_SESSION_PLAYERS : MAX_PLAYERS;
+  }
+
+  // ---- houses ----
+
+  private table(id: string): Table {
+    const t = this.tables.find((x) => x.id === id);
+    if (!t) throw new IllegalMove(`no house ${id}`);
+    return t;
+  }
+
+  /** The house a player is in. Falls back to the first, which is all there is
+   *  in one-house play and the only sane default before assignment. */
+  private tableOf(playerId: string): Table {
+    const houseId = this.lobby.find((p) => p.id === playerId)?.houseId;
+    return this.tables.find((t) => t.id === houseId) ?? this.tables[0];
+  }
+
+  private membersOf(houseId: string): PendingPlayer[] {
+    if (this.mode === 'one-house') return this.lobby;
+    return this.lobby.filter((p) => p.houseId === houseId);
+  }
+
+  nameHouse(houseId: string, name: string): void {
+    const trimmed = name.trim().slice(0, 24);
+    if (!trimmed) return;
+    this.table(houseId).name = trimmed;
+    this.pushViews();
+  }
+
+  /**
+   * Put a person in a house, in a character, or both.
+   *
+   * Lobby only. After the deal a character is attached to a hand of clues and a
+   * house is a whole game, so moving anybody would mean redealing — which would
+   * take clues out of hands the rest of the house has already been told about.
+   */
+  assign(playerId: string, houseId?: string, characterId?: string): void {
+    if (this.started) throw new IllegalMove('the game has already been dealt');
+    const player = this.lobby.find((p) => p.id === playerId);
+    if (!player) throw new IllegalMove('no such player');
+    if (houseId !== undefined) {
+      this.table(houseId); // throws on an unknown house
+      if (this.membersOf(houseId).length >= MAX_PLAYERS && player.houseId !== houseId)
+        throw new IllegalMove('that house is full');
+      player.houseId = houseId;
+    }
+    if (characterId !== undefined) {
+      if (characterId === '') delete player.characterId;
+      else {
+        if (!this.pack.characters.some((c) => c.id === characterId))
+          throw new IllegalMove('no such character');
+        if (this.lobby.some((p) => p.id !== playerId && p.characterId === characterId))
+          throw new IllegalMove('somebody already has that character');
+        player.characterId = characterId;
+      }
+    }
+    this.pushViews();
+  }
+
+  // ---- bots ----
+
   /** Seat an AI player. They join the lobby and are dealt a character like anyone. */
-  addBot(): { id: string; name: string } {
-    return this.bots.add();
+  addBot(houseId?: string): { id: string; name: string } {
+    const table = houseId === undefined ? this.emptiestTable() : this.table(houseId);
+    return table.addBot();
+  }
+
+  /** Bots fill up the house that needs them most, so a two-house test is even. */
+  private emptiestTable(): Table {
+    let best = this.tables[0];
+    for (const t of this.tables)
+      if (this.membersOf(t.id).length < this.membersOf(best.id).length) best = t;
+    return best;
   }
 
   isBot(playerId: string): boolean {
-    return this.bots.has(playerId);
+    return this.tables.some((t) => t.isBot(playerId));
   }
 
   get botCount(): number {
-    return this.bots.count;
+    return this.tables.reduce((n, t) => n + t.botCount, 0);
   }
 
   /** Called when the room is torn down, so an abandoned room stops ticking. */
   stopBots(): void {
-    this.bots.stop();
+    for (const t of this.tables) t.stopBots();
   }
 
   /** Drives one round of bot behaviour. Exposed so tests need no wall clock. */
   async tickBots(): Promise<void> {
-    await this.bots.tick();
+    for (const t of this.tables) await t.tickBots();
   }
 
-  /**
-   * Pacing (D12). In the closing minutes of an act, if nothing has happened for
-   * a while, point the room at something one of them is still holding.
-   *
-   * Deterministic, and it never hands anything over: the clue is named, its
-   * contents are not, and neither is the person holding it. A room that has to
-   * ask "who has the grey thread?" is a room doing the thing the game is about.
-   * Once per act — a second prompt is nagging, and nagging is not pacing.
-   */
+  /** Pacing (D12). Each house is nudged on its own quiet, not the room's. */
   considerNudge(now = Date.now()): void {
-    const s = this.state;
-    if (s?.phase !== 'act' || this.nudged.has(s.act)) return;
-    const started = s.actStartedAt;
-    if (started === undefined) return;
-
-    const ends = started + this.actDef(s.act).minutes * 60_000;
-    const left = ends - now;
-    if (left > NUDGE_WINDOW_MS || left < 0) return;
-
-    // Quiet means quiet: a vote is not a contribution for this purpose.
-    const lastMove = [...s.log].reverse().find((e) => e.move.type !== 'commit-vote')?.at;
-    if (lastMove !== undefined && now - lastMove < NUDGE_SILENCE_MS) return;
-
-    // Something that actually matters, still in somebody's hand.
-    const proven = new Set(this.pack.solution.provenBy);
-    const onBoard = new Set(s.board.map((t) => t.clueId));
-    for (const player of s.players) {
-      const held = player.hand.find((id) => proven.has(id) && !onBoard.has(id));
-      if (held === undefined) continue;
-      const clue = this.pack.clues.find((c) => c.id === held);
-      if (!clue) continue;
-      this.nudged.add(s.act);
-      this.nudge = { clueId: held, title: clue.title, holder: player.id };
-      this.pushViews();
-      return;
-    }
+    let changed = false;
+    for (const t of this.tables)
+      if (t.considerNudge(now, (act) => this.actDef(act).minutes)) changed = true;
+    if (changed) this.pushViews();
   }
 
   // ---- membership ----
@@ -147,16 +214,23 @@ export class Room {
   }
 
   /** Join (or reconnect) a player. Returns their stable id. */
-  joinPlayer(name: string, existingId?: string): string {
+  joinPlayer(name: string, existingId?: string, houseId?: string): string {
     const existing = this.lobby.find((p) => p.id === existingId);
     if (existing) {
       existing.connected = true;
       return existing.id;
     }
-    if (this.state) throw new IllegalMove('game already started');
-    if (this.lobby.length >= 8) throw new IllegalMove('room is full');
+    if (this.started) throw new IllegalMove('game already started');
+    if (this.lobby.length >= this.capacity) throw new IllegalMove('room is full');
     const id = `p-${randomBytes(4).toString('hex')}`;
-    this.lobby.push({ id, name, connected: true });
+    // Everyone lands somewhere. With two houses the facilitator will move them,
+    // but a player with no house at all has no phone view to be sent.
+    this.lobby.push({
+      id,
+      name,
+      connected: true,
+      houseId: houseId ?? this.emptiestTable().id,
+    });
     return id;
   }
 
@@ -171,18 +245,44 @@ export class Room {
   // ---- game flow ----
 
   async facilitate(action: FacilitatorAction['type']): Promise<void> {
-    if (action === 'start' && !this.state) {
-      this.state = createGame(this.pack, this.lobby, this.seed);
-    }
-    if (!this.state) throw new IllegalMove('no players joined yet');
-    this.state = applyFacilitator(this.pack, this.state, { type: action }, Date.now());
-    if (this.state.phase === 'reveal' && !this.reveal) {
-      this.reveal = await buildReveal(this.pack, this.state, this.bots.ids);
-    }
-    this.nudge = null;
+    if (action === 'start' && !this.started) this.deal();
+    const at = Date.now();
+    for (const t of this.tables) await t.facilitate(action, at);
     this.pushViews();
     // Not awaited: the act begins now, and the voice catches up with the card.
-    if (this.state.phase === 'act') void this.narrateAct(this.state.act);
+    const phase = this.tables[0].state?.phase;
+    const act = this.tables[0].state?.act;
+    if (phase === 'act' && act !== undefined) void this.narrateAct(act);
+  }
+
+  /**
+   * Deal every house in, at once.
+   *
+   * Casting runs house by house and each is told what the earlier one took, so
+   * no character is played at both tables — two Lady Margarets in one room is
+   * confusing on the big screen and worse in the debrief.
+   */
+  private deal(): void {
+    const rosters = this.tables.map((t) => ({
+      name: t.name,
+      players: this.membersOf(t.id).map((p) => ({
+        id: p.id,
+        name: p.name,
+        ...(this.isBot(p.id) ? { bot: true as const } : {}),
+        ...(p.characterId !== undefined ? { characterId: p.characterId } : {}),
+      })),
+    }));
+    for (const [i, roster] of rosters.entries())
+      if (roster.players.length < MIN_PLAYERS)
+        throw new IllegalMove(
+          `${this.tables[i]?.name ?? 'a house'} has ${String(roster.players.length)} players, and needs at least ${String(MIN_PLAYERS)}`,
+        );
+
+    // Validated as a session first, so a bad roster throws before any house has
+    // been dealt — half a dealt session is not a state anything can recover to.
+    const session = createSession(this.pack, this.mode, rosters, this.seed);
+    for (const [i, table] of this.tables.entries()) table.state = session.houses[i]?.game ?? null;
+    this.started = true;
   }
 
   /**
@@ -190,84 +290,33 @@ export class Room {
    * time, and a test that cannot say when something happened cannot test it.
    */
   async handleMove(move: Move, at = Date.now()): Promise<void> {
-    if (!this.state) throw new IllegalMove('game not started');
-    this.state = applyMove(this.pack, this.state, move, at);
-    if (this.nudge && this.state.board.some((t) => t.clueId === this.nudge?.clueId))
-      this.nudge = null;
+    await this.tableOf(move.playerId).handleMove(move, at);
     this.pushViews();
-    if (move.type === 'ask-suspect') await this.answerSuspect(move);
-    if (this.state.accusation && this.state.phase !== 'reveal') {
-      // Accusation lands -> facilitator will trigger the reveal; nothing automatic.
-    }
   }
 
-  private async answerSuspect(move: Extract<Move, { type: 'ask-suspect' }>): Promise<void> {
-    // Started first and not waited on: the question's words are known now, and
-    // the room can be hearing them while the model writes the reply.
-    void this.speakAsk(move.questionId, move.playerId, move.text);
-    const history = this.qaHistory.get(move.suspectId) ?? [];
-    const { answer, fromBank } = await askSuspect(
-      this.pack,
-      move.suspectId,
-      move.text,
-      history,
-      this.describeAsker(move.playerId),
-    );
-    history.push({ question: move.text, answer });
-    this.qaHistory.set(move.suspectId, history.slice(-10));
-    if (this.state) {
-      this.state = {
-        ...this.state,
-        questions: this.state.questions.map((q) =>
-          q.id === move.questionId ? { ...q, answer, answeredAt: Date.now(), fromBank } : q,
-        ),
-      };
+  // ---- the spoken layer ----
+
+  private putVoice(key: string, audio: Buffer): void {
+    this.voices.set(key, audio);
+    for (const [oldest] of this.voices) {
+      if (this.voices.size <= 20 * this.tables.length) break;
+      // Narration is made once and may be replayed; only answers age out.
+      if (oldest.includes('prologue-') || oldest.includes('act-')) continue;
+      this.voices.delete(oldest);
     }
-    this.broadcast({
-      type: 'suspect-answer',
-      questionId: move.questionId,
-      suspectId: move.suspectId,
-      answer,
-      fromBank,
-    });
-    this.pushViews();
-    // The written answer is already on the screen, so the voice is chased
-    // separately: the room reads it while the speech is still being made.
-    void this.speak(move.questionId, move.suspectId, answer);
   }
 
   /**
-   * Who a suspect is talking to, in the suspect's own terms. The character's
-   * vocal direction is used because it is the one field that states their sex
-   * and age plainly, which is exactly what was being guessed at.
+   * The act's opening lines, spoken. Made once when the act begins, so the
+   * break card has a voice by the time the room is looking at it. Shared: there
+   * is one big screen, and both houses are in the same act.
    */
-  private describeAsker(playerId: string): string | undefined {
-    const characterId = this.state?.players.find((p) => p.id === playerId)?.characterId;
-    const c = this.pack.characters.find((x) => x.id === characterId);
-    if (!c) return undefined;
-    return [c.name, c.role, c.voiceDirection].filter(Boolean).join(' — ');
-  }
-
-  /** The asker's question, in the voice of the character they were dealt. */
-  private async speakAsk(questionId: string, playerId: string, text: string): Promise<void> {
-    const characterId = this.state?.players.find((p) => p.id === playerId)?.characterId;
-    if (characterId === undefined) return;
-    const audio = await speakQuestion(this.pack, characterId, text);
+  private async narrateAct(act: 1 | 2 | 3): Promise<void> {
+    const key = `act-${String(act)}`;
+    if (this.voices.has(key)) return;
+    const audio = await narrate(this.pack, this.actDef(act).opening);
     if (!audio) return;
-    this.voices.set(`ask-${questionId}`, audio);
-    this.pushViews();
-  }
-
-  private async speak(questionId: string, suspectId: string, answer: string): Promise<void> {
-    const audio = await speakAnswer(this.pack, suspectId, answer);
-    if (!audio) return;
-    this.voices.set(questionId, audio);
-    for (const [oldest] of this.voices) {
-      if (this.voices.size <= 20) break;
-      // Narration is made once and may be replayed; only answers age out.
-      if (oldest.startsWith('prologue-')) continue;
-      this.voices.delete(oldest);
-    }
+    this.putVoice(key, audio);
     this.pushViews();
   }
 
@@ -276,19 +325,6 @@ export class Room {
    * a facilitator who plays it twice — a latecomer, a false start — waits only
    * the first time. The screen is handed the beats and does the rest.
    */
-  /**
-   * The act's opening lines, spoken. Made once when the act begins, so the
-   * break card has a voice by the time the room is looking at it.
-   */
-  private async narrateAct(act: 1 | 2 | 3): Promise<void> {
-    const key = `act-${String(act)}`;
-    if (this.voices.has(key)) return;
-    const audio = await narrate(this.pack, this.actDef(act).opening);
-    if (!audio) return;
-    this.voices.set(key, audio);
-    this.pushViews();
-  }
-
   async setPrologue(playing: boolean): Promise<void> {
     const prologue = this.pack.prologue;
     if (!prologue?.beats.length) return;
@@ -301,14 +337,14 @@ export class Room {
     for (const [i, beat] of prologue.beats.entries()) {
       const audio = await narrate(this.pack, beat.text);
       if (!audio) continue;
-      this.voices.set(`prologue-${String(i)}`, audio);
+      this.putVoice(`prologue-${String(i)}`, audio);
       this.pushViews();
     }
   }
 
   /** The mp3 for one answer, for the HTTP route the big screen fetches. */
-  voice(questionId: string): Buffer | undefined {
-    return this.voices.get(questionId);
+  voice(key: string): Buffer | undefined {
+    return this.voices.get(key);
   }
 
   // ---- views ----
@@ -334,6 +370,11 @@ export class Room {
     return def;
   }
 
+  /** The lead house, which sets the phase and act for the shared screen. */
+  private get lead(): GameState | null {
+    return this.tables[0].state;
+  }
+
   /**
    * The backdrop for the current beat of the flow (D20: the server decides,
    * the screen only renders what it is handed). Falls back act -> lobby so a
@@ -342,28 +383,101 @@ export class Room {
   private sceneAsset(): string | undefined {
     const scenes = this.pack.theme?.scenes;
     if (!scenes) return undefined;
-    const s = this.state;
+    const s = this.lead;
     const phase = s?.phase ?? 'lobby';
     if (phase === 'lobby') return scenes.lobby;
     if (phase === 'reveal') return scenes.reveal ?? scenes.act3;
     const forAct = [scenes.act1, scenes.act2, scenes.act3][(s?.act ?? 1) - 1];
-    if (s?.accusation) return scenes.accusation ?? forAct;
+    if (this.tables.some((t) => t.state?.accusation)) return scenes.accusation ?? forAct;
     if (phase === 'commitment') return scenes.commitment ?? forAct;
     return forAct ?? scenes.lobby;
   }
 
   private names(): Map<string, string> {
-    const m = new Map(this.lobby.map((p) => [p.id, p.name]));
-    return m;
+    return new Map(this.lobby.map((p) => [p.id, p.name]));
+  }
+
+  private suspectName(id: string): string {
+    return this.pack.suspects.find((x) => x.id === id)?.name ?? id;
+  }
+
+  private castOf(playerId: string, s: GameState | null) {
+    const characterId = s?.players.find((p) => p.id === playerId)?.characterId;
+    return this.pack.characters.find((c) => c.id === characterId);
+  }
+
+  /** One house's cast, for the big screen. */
+  private housePlayers(table: Table) {
+    const names = this.names();
+    return (table.state?.players ?? []).map((p) => {
+      const character = this.castOf(p.id, table.state);
+      return {
+        id: p.id,
+        name: names.get(p.id) ?? p.id,
+        characterName: character?.name ?? '',
+        ...(character?.portraitAsset ? { portraitAsset: character.portraitAsset } : {}),
+      };
+    });
+  }
+
+  private houseBoard(table: Table) {
+    const names = this.names();
+    const clueById = new Map(this.pack.clues.map((c) => [c.id, c]));
+    return (table.state?.board ?? []).map((t) => {
+      const clue = clueById.get(t.clueId);
+      return {
+        ...t,
+        title: clue?.title ?? '',
+        text: clue?.text ?? '',
+        byName: names.get(t.by) ?? t.by,
+        ...(clue?.imageAsset ? { imageAsset: clue.imageAsset } : {}),
+      };
+    });
+  }
+
+  private houseTheories(table: Table) {
+    const names = this.names();
+    return (table.state?.theories ?? []).map((t) => ({ ...t, byName: names.get(t.by) ?? t.by }));
+  }
+
+  /** Both houses' questions, newest last, each tagged with who asked. */
+  private allQuestions() {
+    const names = this.names();
+    const rows = this.tables.flatMap((table) =>
+      (table.state?.questions ?? []).map((q) => ({
+        ...q,
+        byName: names.get(q.by) ?? q.by,
+        suspectName: this.suspectName(q.suspectId),
+        ...(this.mode === 'two-houses' ? { houseName: table.name } : {}),
+        ...(this.voices.has(table.voiceKey(`ask-${q.id}`))
+          ? { askUrl: `/voice/${this.code}/${table.voiceKey(`ask-${q.id}`)}.mp3` }
+          : {}),
+        ...(this.voices.has(table.voiceKey(q.id))
+          ? { voiceUrl: `/voice/${this.code}/${table.voiceKey(q.id)}.mp3` }
+          : {}),
+      })),
+    );
+    return rows.sort((a, b) => a.at - b.at).slice(-12);
+  }
+
+  /** Only once every house has finished: a live scoreboard is a copying aid. */
+  private comparison(): HouseResult[] | undefined {
+    if (this.mode !== 'two-houses') return undefined;
+    const houses = this.tables.flatMap((t) => {
+      const game = t.state;
+      return game?.phase === 'reveal' ? [{ id: t.id, name: t.name, game }] : [];
+    });
+    if (houses.length !== this.tables.length) return undefined;
+    return compareHouses({ caseId: this.pack.id, seed: this.seed, mode: this.mode, houses });
   }
 
   screenView(): ScreenView {
-    const s = this.state;
-    const names = this.names();
-    const clueById = new Map(this.pack.clues.map((c) => [c.id, c]));
-    const suspectName = (id: string) => this.pack.suspects.find((x) => x.id === id)?.name ?? id;
+    const s = this.lead;
     const act = this.actDef(s?.act ?? 1);
     const scene = this.sceneAsset();
+    const first = this.tables[0];
+    const comparison = this.comparison();
+    const nudge = this.tables.find((t) => t.nudge)?.nudge;
     return {
       type: 'screen-view',
       roomCode: this.code,
@@ -381,43 +495,44 @@ export class Room {
           ? { portraitAsset: this.pack.victim.portraitAsset }
           : {}),
       },
-      players: (s?.players ?? [])
-        .map((p) => {
-          const character = this.pack.characters.find((c) => c.id === p.characterId);
-          return {
-            id: p.id,
-            name: names.get(p.id) ?? p.id,
-            characterName: character?.name ?? '',
-            ...(character?.portraitAsset ? { portraitAsset: character.portraitAsset } : {}),
-          };
-        })
-        .concat(s ? [] : this.lobby.map((p) => ({ id: p.id, name: p.name, characterName: '' }))),
+      // The flat fields describe the lead house, which in one-house play is the
+      // only one. A two-house screen reads `houses` and ignores these.
+      players: this.started
+        ? this.housePlayers(first)
+        : this.lobby.map((p) => ({ id: p.id, name: p.name, characterName: '' })),
+      houses: this.tables.map((t) => ({
+        id: t.id,
+        name: t.name,
+        players: this.housePlayers(t),
+        board: this.houseBoard(t),
+        theories: this.houseTheories(t),
+        ...(t.state?.act === 3
+          ? {
+              committed: {
+                count: Object.keys(t.state.accusationVotes).length,
+                of: t.state.players.filter((p) => !p.bot).length,
+              },
+            }
+          : {}),
+        ...(t.state?.accusation
+          ? {
+              accusation: {
+                ...t.state.accusation,
+                culpritName: this.suspectName(t.state.accusation.culpritId),
+              },
+            }
+          : {}),
+      })),
+      ...(comparison ? { comparison } : {}),
       suspects: this.pack.suspects.map(({ id, name, publicBio, portraitAsset }) => ({
         id,
         name,
         publicBio,
         ...(portraitAsset ? { portraitAsset } : {}),
       })),
-      board: (s?.board ?? []).map((t) => {
-        const clue = clueById.get(t.clueId);
-        return {
-          ...t,
-          title: clue?.title ?? '',
-          text: clue?.text ?? '',
-          byName: names.get(t.by) ?? t.by,
-          ...(clue?.imageAsset ? { imageAsset: clue.imageAsset } : {}),
-        };
-      }),
-      theories: (s?.theories ?? []).map((t) => ({ ...t, byName: names.get(t.by) ?? t.by })),
-      questions: (s?.questions ?? []).slice(-12).map((q) => ({
-        ...q,
-        byName: names.get(q.by) ?? q.by,
-        suspectName: suspectName(q.suspectId),
-        ...(this.voices.has(`ask-${q.id}`)
-          ? { askUrl: `/voice/${this.code}/ask-${q.id}.mp3` }
-          : {}),
-        ...(this.voices.has(q.id) ? { voiceUrl: `/voice/${this.code}/${q.id}.mp3` } : {}),
-      })),
+      board: this.houseBoard(first),
+      theories: this.houseTheories(first),
+      questions: this.allQuestions(),
       ...(this.prologuePlaying && this.pack.prologue
         ? {
             prologue: {
@@ -438,10 +553,8 @@ export class Room {
         ? { actOpeningUrl: `/voice/${this.code}/act-${String(s.act)}.mp3` }
         : {}),
       ...(s ? this.lastDecision(s) : {}),
-      ...(this.nudge
-        ? {
-            nudge: `The house has gone quiet. Somebody here is still holding “${this.nudge.title}”.`,
-          }
+      ...(nudge
+        ? { nudge: `The house has gone quiet. Somebody here is still holding “${nudge.title}”.` }
         : {}),
       ...(s?.phase === 'commitment'
         ? {
@@ -452,30 +565,36 @@ export class Room {
                 : (act.commitment.options ?? []),
           }
         : {}),
-      ...(s?.accusation
-        ? { accusation: { ...s.accusation, culpritName: suspectName(s.accusation.culpritId) } }
+      ...(first.state?.accusation
+        ? {
+            accusation: {
+              ...first.state.accusation,
+              culpritName: this.suspectName(first.state.accusation.culpritId),
+            },
+          }
         : {}),
-      ...(s?.phase === 'reveal' && this.reveal ? { reveal: this.reveal.shared } : {}),
+      ...(s?.phase === 'reveal' && first.reveal ? { reveal: first.reveal.shared } : {}),
     };
   }
 
   phoneView(playerId: string): PhoneView | null {
-    const s = this.state;
+    const table = this.tableOf(playerId);
+    const s = table.state;
     const names = this.names();
     const clueById = new Map(this.pack.clues.map((c) => [c.id, c]));
     const player = s?.players.find((p) => p.id === playerId);
-    const character = player
-      ? this.pack.characters.find((c) => c.id === player.characterId)
-      : undefined;
+    const character = this.castOf(playerId, s);
     const act = this.actDef(s?.act ?? 1);
     const tabled = new Set((s?.board ?? []).map((t) => t.clueId));
     const commitment = s?.commitments.at(-1);
+    const deciding = (s?.players ?? []).filter((p) => !p.bot);
     return {
       type: 'phone-view',
       playerId,
       roomCode: this.code,
       phase: s?.phase ?? 'lobby',
       act: s?.act ?? 1,
+      ...(this.mode === 'two-houses' ? { houseName: table.name } : {}),
       character: {
         name: character?.name ?? names.get(playerId) ?? '',
         role: character?.role ?? '',
@@ -492,14 +611,18 @@ export class Room {
           ...(clue?.imageAsset ? { imageAsset: clue.imageAsset } : {}),
         };
       }),
-      players: this.lobby.filter((p) => p.id !== playerId).map((p) => ({ id: p.id, name: p.name })),
+      // Only this house. The whisper list is how a player names somebody, and
+      // naming somebody in the other house would be a move that cannot land.
+      players: this.membersOf(table.id)
+        .filter((p) => p.id !== playerId)
+        .map((p) => ({ id: p.id, name: p.name })),
       suspects: this.pack.suspects.map(({ id, name, publicBio, portraitAsset }) => ({
         id,
         name,
         publicBio,
         ...(portraitAsset ? { portraitAsset } : {}),
       })),
-      theories: (s?.theories ?? []).map((t) => ({ ...t, byName: names.get(t.by) ?? t.by })),
+      theories: this.houseTheories(table),
       ...(s?.phase === 'commitment' && commitment && !commitment.closedAt
         ? {
             commitment: {
@@ -513,15 +636,34 @@ export class Room {
             },
           }
         : {}),
-      ...(this.nudge?.holder === playerId
+      ...(table.nudge?.holder === playerId
         ? {
-            nudge: `You are still holding “${this.nudge.title}”. The house has gone quiet — this may be the moment.`,
+            nudge: `You are still holding “${table.nudge.title}”. The house has gone quiet — this may be the moment.`,
+          }
+        : {}),
+      ...(s && (s.act === 3 || s.accusation)
+        ? {
+            accusation: {
+              ...(s.accusationVotes[playerId] ? { myChoice: s.accusationVotes[playerId] } : {}),
+              votes: deciding.map((p) => {
+                const choice = s.accusationVotes[p.id];
+                return {
+                  playerId: p.id,
+                  name: names.get(p.id) ?? p.id,
+                  ...(choice ? { culpritId: choice, culpritName: this.suspectName(choice) } : {}),
+                };
+              }),
+              motive: s.motive,
+              ...(s.accusation
+                ? { locked: { culpritName: this.suspectName(s.accusation.culpritId) } }
+                : {}),
+            },
           }
         : {}),
       canAccuse: s?.act === 3 && s.phase === 'act' && !s.accusation,
-      ...(s?.phase === 'reveal' && this.reveal
+      ...(s?.phase === 'reveal' && table.reveal
         ? {
-            privateReveal: this.reveal.privates.get(playerId) ?? {
+            privateReveal: table.reveal.privates.get(playerId) ?? {
               headline: '',
               strength: '',
               evidence: [],
@@ -557,43 +699,94 @@ export class Room {
   }
 
   consoleView(): ConsoleView {
-    const s = this.state;
+    const s = this.lead;
     const act = this.actDef(s?.act ?? 1);
+    const comparison = this.comparison();
+    const taken = new Map<string, string>();
+    for (const p of this.lobby) if (p.characterId !== undefined) taken.set(p.characterId, p.name);
     return {
       type: 'console-view',
       roomCode: this.code,
+      mode: this.mode,
       phase: s?.phase ?? 'lobby',
       act: s?.act ?? 1,
       ...(s?.actStartedAt !== undefined ? { actStartedAt: s.actStartedAt } : {}),
       actMinutes: act.minutes,
-      players: this.lobby.map((p) => ({
-        id: p.id,
-        name: p.name,
-        connected: p.connected,
-        moveCount: (s?.log ?? []).filter((e) => e.move.playerId === p.id).length,
-        bot: this.bots.has(p.id),
-      })),
-      boardCount: s?.board.length ?? 0,
-      questionCount: s?.questions.length ?? 0,
-      accusationMade: Boolean(s?.accusation),
+      players: this.lobby.map((p) => {
+        const table = this.tableOf(p.id);
+        const dealt = table.state?.players.find((x) => x.id === p.id)?.characterId;
+        const characterId = p.characterId ?? dealt;
+        return {
+          id: p.id,
+          name: p.name,
+          connected: p.connected,
+          moveCount: (table.state?.log ?? []).filter((e) => e.move.playerId === p.id).length,
+          bot: this.isBot(p.id),
+          ...(p.houseId !== undefined ? { houseId: p.houseId } : {}),
+          ...(characterId !== undefined
+            ? {
+                characterId,
+                characterName:
+                  this.pack.characters.find((c) => c.id === characterId)?.name ?? characterId,
+              }
+            : {}),
+        };
+      }),
+      houses: this.tables.map((t) => {
+        const n = this.membersOf(t.id).length;
+        return { id: t.id, name: t.name, playerCount: n, ready: n >= MIN_PLAYERS };
+      }),
+      ...(this.started
+        ? {}
+        : {
+            characters: this.pack.characters.map((c) => {
+              const takenBy = taken.get(c.id);
+              return {
+                id: c.id,
+                name: c.name,
+                role: c.role,
+                lean: c.botLean ?? 'detail',
+                ...(c.voiceDirection ? { voiceDirection: c.voiceDirection } : {}),
+                ...(c.portraitAsset ? { portraitAsset: c.portraitAsset } : {}),
+                ...(takenBy !== undefined ? { takenBy } : {}),
+              };
+            }),
+          }),
+      ...(comparison ? { comparison } : {}),
+      boardCount: this.tables.reduce((n, t) => n + (t.state?.board.length ?? 0), 0),
+      questionCount: this.tables.reduce((n, t) => n + (t.state?.questions.length ?? 0), 0),
+      accusationMade: this.tables.every((t) => Boolean(t.state?.accusation)),
       ...(s?.phase === 'commitment'
         ? {
             votesIn: {
-              voted: Object.keys(s.commitments.at(-1)?.votes ?? {}).length,
-              of: s.players.length,
+              voted: this.tables.reduce(
+                (n, t) => n + Object.keys(t.state?.commitments.at(-1)?.votes ?? {}).length,
+                0,
+              ),
+              of: this.tables.reduce((n, t) => n + (t.state?.players.length ?? 0), 0),
             },
           }
         : {}),
       screenConnected: [...this.clients].some((c) => c.role === 'screen'),
       prologuePlaying: this.prologuePlaying,
       hasPrologue: Boolean(this.pack.prologue?.beats.length),
-      ...(s?.phase === 'reveal' && this.reveal ? { teamReveal: this.reveal.teamShape } : {}),
+      ...(s?.phase === 'reveal' && this.tables[0].reveal
+        ? { teamReveal: this.tables[0].reveal.teamShape }
+        : {}),
     };
   }
 
-  /** For persistence after the game. */
+  /** For persistence after the game. One row per house. */
   snapshot(): { caseId: string; state: GameState | null } {
-    return { caseId: this.pack.id, state: this.state };
+    return { caseId: this.pack.id, state: this.lead };
+  }
+
+  /** Every house's finished state, for the store and the debrief. */
+  snapshots(): { houseId: string; houseName: string; state: GameState }[] {
+    return this.tables.flatMap((t) => {
+      const state = t.state;
+      return state ? [{ houseId: t.id, houseName: t.name, state }] : [];
+    });
   }
 
   /**
@@ -601,8 +794,10 @@ export class Room {
    * well as stored, so a room is legible from the Render log with no database.
    */
   metrics(): ReturnType<typeof computeMetrics> | null {
-    if (!this.state) return null;
-    const m = computeMetrics(this.pack, this.state, this.bots.ids);
+    const s = this.lead;
+    if (!s) return null;
+    const bots = new Set(this.tables.flatMap((t) => [...t.botIds]));
+    const m = computeMetrics(this.pack, s, bots);
     console.log(summariseMetrics(m));
     return m;
   }

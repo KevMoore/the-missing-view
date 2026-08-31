@@ -423,11 +423,29 @@ function Decide({ view, send }: { view: PhoneView; send: Send }) {
       </div>
     );
   }
-  if (view.canAccuse) {
+  const accusation = view.accusation;
+  if (accusation?.locked) {
     return (
       <div className="deco-frame">
-        <div className="deco-rule">Name the killer</div>
-        <p className="muted small mb">One answer for the whole house (agree it out loud first).</p>
+        <div className="deco-rule">The house has accused</div>
+        <p className="lead center">{accusation.locked.culpritName}</p>
+        {accusation.motive ? <p className="muted center small">{accusation.motive}</p> : null}
+        <p className="muted center small mt">Every one of you signed it. Wait for the reveal.</p>
+      </div>
+    );
+  }
+  if (view.canAccuse && accusation) {
+    const mine = accusation.myChoice;
+    const others = accusation.votes.filter((v) => v.playerId !== view.playerId);
+    const waiting = accusation.votes.filter((v) => !v.culpritId).length;
+    const split = new Set(accusation.votes.map((v) => v.culpritId).filter(Boolean)).size > 1;
+    return (
+      <div className="deco-frame">
+        <div className="deco-rule">The house accuses</div>
+        <p className="muted small mb">
+          It is not your accusation to make. Every one of you names the same person, and the house
+          accuses. Until then, nothing is locked.
+        </p>
         <select
           value={culprit}
           onChange={(e) => {
@@ -445,30 +463,61 @@ function Decide({ view, send }: { view: PhoneView; send: Send }) {
           className="mt"
           rows={2}
           placeholder="The motive, in a sentence…"
-          value={motive}
+          value={motive || accusation.motive}
           onChange={(e) => {
             setMotive(e.target.value);
+          }}
+          onBlur={() => {
+            if (motive.trim() && motive.trim() !== accusation.motive)
+              send({
+                type: 'move',
+                move: { type: 'set-motive', playerId: view.playerId, text: motive.trim() },
+              });
           }}
           aria-label="The motive"
         />
         <button
-          className="danger mt"
+          className={mine ? 'mt' : 'danger mt'}
           style={{ width: '100%' }}
-          disabled={!motive.trim()}
           onClick={() => {
-            send({
-              type: 'move',
-              move: {
-                type: 'accuse',
-                playerId: view.playerId,
-                culpritId: culprit,
-                motive: motive.trim(),
-              },
-            });
+            if (motive.trim() && motive.trim() !== accusation.motive)
+              send({
+                type: 'move',
+                move: { type: 'set-motive', playerId: view.playerId, text: motive.trim() },
+              });
+            send(
+              mine === culprit
+                ? { type: 'move', move: { type: 'accuse-withdraw', playerId: view.playerId } }
+                : {
+                    type: 'move',
+                    move: { type: 'accuse-commit', playerId: view.playerId, culpritId: culprit },
+                  },
+            );
           }}
         >
-          Make the accusation
+          {mine === culprit ? 'Take my name off it' : 'I say it was them'}
         </button>
+
+        {/* Everyone sees where the house stands. An accusation that lands
+            without warning is a vote somebody lost, not a decision. */}
+        <div className="deco-rule mt">Where the house stands</div>
+        <ul className="rows">
+          {others.map((v) => (
+            <li key={v.playerId}>
+              <span>{v.name}</span>
+              <span className={v.culpritId ? 'tag' : 'muted small'}>
+                {v.culpritName ?? 'still deciding'}
+              </span>
+            </li>
+          ))}
+        </ul>
+        <p className="muted small">
+          {waiting > 0
+            ? `${String(waiting)} still to say.`
+            : split
+              ? 'You are not agreed. Talk it out.'
+              : 'One more and it is done.'}
+        </p>
       </div>
     );
   }

@@ -211,7 +211,10 @@ wss.on('connection', (socket: WebSocket) => {
           case 'create-room': {
             const pack = cases.get(msg.caseId);
             if (!pack) throw new IllegalMove(`unknown case ${msg.caseId}`);
-            room = new Room(pack, { tickMs: BOT_TICK_MS });
+            room = new Room(pack, {
+              tickMs: BOT_TICK_MS,
+              ...(msg.mode ? { mode: msg.mode } : {}),
+            });
             rooms.set(room.code, room);
             socketRooms.set(socket, room.code);
             client = { role: 'console', send };
@@ -254,12 +257,15 @@ wss.on('connection', (socket: WebSocket) => {
             if (!room || client?.role !== 'console') throw new IllegalMove('facilitator only');
             await room.facilitate(msg.action);
             if (msg.action === 'trigger-reveal' || msg.action === 'next-act') {
-              const snap = room.snapshot();
-              if (snap.state?.phase === 'reveal') {
+              // One row per house. Two houses played the same case and are only
+              // worth comparing if both were kept.
+              const caseId = room.snapshot().caseId;
+              for (const house of room.snapshots()) {
+                if (house.state.phase !== 'reveal') continue;
                 await saveFinishedGame(
-                  room.code,
-                  snap.caseId,
-                  snap.state,
+                  room.snapshots().length > 1 ? `${room.code}-${house.houseId}` : room.code,
+                  caseId,
+                  house.state,
                   room.emailOptIns,
                   room.metrics() ?? {},
                 );
@@ -291,8 +297,18 @@ wss.on('connection', (socket: WebSocket) => {
           }
           case 'add-bot': {
             if (!room || client?.role !== 'console') throw new IllegalMove('facilitator only');
-            room.addBot();
+            room.addBot(msg.houseId);
             room.pushViews();
+            return;
+          }
+          case 'assign': {
+            if (!room || client?.role !== 'console') throw new IllegalMove('facilitator only');
+            room.assign(msg.playerId, msg.houseId, msg.characterId);
+            return;
+          }
+          case 'name-house': {
+            if (!room || client?.role !== 'console') throw new IllegalMove('facilitator only');
+            room.nameHouse(msg.houseId, msg.name);
             return;
           }
           case 'email-optin': {

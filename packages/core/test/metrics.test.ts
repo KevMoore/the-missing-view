@@ -26,6 +26,8 @@ function game(over: Partial<GameState> = {}): GameState {
       { id: 'p3', name: 'Bot', characterId: 'pc-vicar', hand: [] },
     ],
     board: [],
+    accusationVotes: {},
+    motive: '',
     theories: [],
     questions: [],
     commitments: [],
@@ -56,7 +58,7 @@ describe('game metrics', () => {
         accusation: {
           culpritId: 's-ashworth',
           motive: 'the blood',
-          submittedBy: 'p1',
+          committedBy: ['p1'],
           at: T0,
           correct: false,
         },

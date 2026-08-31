@@ -3,6 +3,7 @@ export * from './case/deal.js';
 export * from './case/validate.js';
 export * from './engine/types.js';
 export * from './engine/engine.js';
+export * from './engine/session.js';
 export * from './reveal/counters.js';
 export * from './reveal/moments.js';
 export * from './reveal/metrics.js';

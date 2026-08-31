@@ -6,9 +6,11 @@ export type { ClientMessage, ServerMessage };
 export type {
   CaseList,
   ConsoleView,
+  HouseResult,
   Music,
   PhoneView,
   ScreenView,
+  SessionMode,
 } from '@tmv/server/src/protocol.js';
 /** Not a wire message — the shape the insights endpoint returns. */
 export type { Insights } from '@tmv/core';

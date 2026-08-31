@@ -87,13 +87,21 @@ export function keyHolderCount(pack: CasePack, deal: Deal): number {
  * the game seed means a pool bigger than the table is worth having: the same
  * case casts differently every session, and the same seed replays exactly.
  */
-export function castCharacters<T extends { botLean?: string }>(
+export function castCharacters<T extends { id: string; botLean?: string }>(
   characters: readonly T[],
   playerCount: number,
   seed: number,
+  /**
+   * Characters already spoken for — assigned by hand, or cast at the other
+   * table. Two people playing the same character in one session is confusing
+   * enough at one table and unusable at two (D37, D38).
+   */
+  exclude: readonly string[] = [],
 ): T[] {
   if (characters.length === 0) return [];
-  const pool = shuffle(characters, mulberry32(seed ^ 0x9e3779b9));
+  const taken = new Set(exclude);
+  const free = characters.filter((c) => !taken.has(c.id));
+  const pool = shuffle(free.length > 0 ? free : characters, mulberry32(seed ^ 0x9e3779b9));
 
   // Spread the lenses. A shuffle alone leaves better than one table in six with
   // two perspectives or fewer between four people, which is a poor game — the
