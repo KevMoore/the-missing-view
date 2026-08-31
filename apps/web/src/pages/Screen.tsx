@@ -1,5 +1,5 @@
 /** The big screen: join code, evidence board, suspect stage, timer, reveal. */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import { remaining, useGameSocket, type ScreenView, type ServerMessage } from '../ws.js';
 import { useMusic, type MusicCue } from '../music.js';
@@ -8,6 +8,7 @@ import { armSpeechUnlock, unlockSpeech } from '../speaker.js';
 import { useArrivals } from '../arrivals.js';
 import { Backdrop } from './Backdrop.js';
 import { Prologue } from './Prologue.js';
+import { ActBreak } from './ActBreak.js';
 
 /**
  * The big screen has no scrollbar and nobody in the room can reach it, so
@@ -143,6 +144,19 @@ export function Screen() {
   );
   const answering = useSuspectVoices(exchanges, joined, muted);
 
+  // A new act gets a beat before the board comes back. Detected here rather
+  // than announced by the server: the act number changing is the whole signal.
+  const [breakFor, setBreakFor] = useState<number | null>(null);
+  const lastAct = useRef<number | null>(null);
+  useEffect(() => {
+    if (view?.phase !== 'act') return;
+    const previous = lastAct.current;
+    lastAct.current = view.act;
+    // Not on a screen that has only just joined — it would open on a card for
+    // an act that started twenty minutes ago.
+    if (previous !== null && previous !== view.act) setBreakFor(view.act);
+  }, [view?.act, view?.phase]);
+
   const boardSignatures = useMemo(
     () => Object.fromEntries((view?.board ?? []).map((c) => [c.clueId, c.clueId])),
     [view?.board],
@@ -259,6 +273,20 @@ export function Screen() {
     );
   }
 
+  if (view?.phase === 'act' && breakFor === view.act) {
+    return (
+      <>
+        {chrome}
+        <ActBreak
+          view={view}
+          onDone={() => {
+            setBreakFor(null);
+          }}
+        />
+      </>
+    );
+  }
+
   // The opening owns the whole screen, so decide before building a board we
   // would only throw away.
   if (view?.prologue) {
@@ -336,6 +364,7 @@ export function Screen() {
               </div>
             ))}
           </div>
+          {view.nudge !== undefined && <p className="nudge fade-up">{view.nudge}</p>}
           <div className="deco-rule">Interrogation</div>
           {view.questions.length === 0 && (
             <p className="muted small">Ask a suspect a question from your phone.</p>

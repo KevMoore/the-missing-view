@@ -176,6 +176,7 @@ function Dossier({ view, send }: { view: PhoneView; send: Send }) {
           {view.character.briefing}
         </p>
       </div>
+      {view.nudge !== undefined && <p className="nudge fade-up">{view.nudge}</p>}
       <div className="deco-rule">Your private clues</div>
       <p className="muted small mb">Only you hold these. The team can’t use what it can’t see.</p>
       {view.hand.map((clue) => (

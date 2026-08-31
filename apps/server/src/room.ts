@@ -20,6 +20,11 @@ import { buildReveal, type RevealBundle } from './reveal.js';
 import { askSuspect, narrate, speakAnswer, speakQuestion } from './llm.js';
 import { BotDriver, type BotOptions } from './bots.js';
 
+/** The closing stretch of an act, where a stalled room is worth prompting. */
+const NUDGE_WINDOW_MS = 5 * 60_000;
+/** How long nothing may happen before the house counts as quiet. */
+const NUDGE_SILENCE_MS = 90_000;
+
 export interface Client {
   role: 'phone' | 'screen' | 'console';
   playerId?: string;
@@ -44,6 +49,10 @@ export class Room {
   private readonly voices = new Map<string, Buffer>();
   /** True while the opening sequence is on the big screen. */
   private prologuePlaying = false;
+  /** The clue the house is currently being nudged about, and who holds it. */
+  private nudge: { clueId: string; title: string; holder: string } | null = null;
+  /** Acts already nudged, so the room is prompted once rather than nagged. */
+  private readonly nudged = new Set<number>();
   /** Narration generated once per room and reused if it is played again. */
   private narrationReady = false;
   /**
@@ -83,6 +92,44 @@ export class Room {
   /** Drives one round of bot behaviour. Exposed so tests need no wall clock. */
   async tickBots(): Promise<void> {
     await this.bots.tick();
+  }
+
+  /**
+   * Pacing (D12). In the closing minutes of an act, if nothing has happened for
+   * a while, point the room at something one of them is still holding.
+   *
+   * Deterministic, and it never hands anything over: the clue is named, its
+   * contents are not, and neither is the person holding it. A room that has to
+   * ask "who has the grey thread?" is a room doing the thing the game is about.
+   * Once per act — a second prompt is nagging, and nagging is not pacing.
+   */
+  considerNudge(now = Date.now()): void {
+    const s = this.state;
+    if (s?.phase !== 'act' || this.nudged.has(s.act)) return;
+    const started = s.actStartedAt;
+    if (started === undefined) return;
+
+    const ends = started + this.actDef(s.act).minutes * 60_000;
+    const left = ends - now;
+    if (left > NUDGE_WINDOW_MS || left < 0) return;
+
+    // Quiet means quiet: a vote is not a contribution for this purpose.
+    const lastMove = [...s.log].reverse().find((e) => e.move.type !== 'commit-vote')?.at;
+    if (lastMove !== undefined && now - lastMove < NUDGE_SILENCE_MS) return;
+
+    // Something that actually matters, still in somebody's hand.
+    const proven = new Set(this.pack.solution.provenBy);
+    const onBoard = new Set(s.board.map((t) => t.clueId));
+    for (const player of s.players) {
+      const held = player.hand.find((id) => proven.has(id) && !onBoard.has(id));
+      if (held === undefined) continue;
+      const clue = this.pack.clues.find((c) => c.id === held);
+      if (!clue) continue;
+      this.nudged.add(s.act);
+      this.nudge = { clueId: held, title: clue.title, holder: player.id };
+      this.pushViews();
+      return;
+    }
   }
 
   // ---- membership ----
@@ -132,12 +179,21 @@ export class Room {
     if (this.state.phase === 'reveal' && !this.reveal) {
       this.reveal = await buildReveal(this.pack, this.state);
     }
+    this.nudge = null;
     this.pushViews();
+    // Not awaited: the act begins now, and the voice catches up with the card.
+    if (this.state.phase === 'act') void this.narrateAct(this.state.act);
   }
 
-  async handleMove(move: Move): Promise<void> {
+  /**
+   * `at` is overridable for the same reason `seed` is: pacing is a function of
+   * time, and a test that cannot say when something happened cannot test it.
+   */
+  async handleMove(move: Move, at = Date.now()): Promise<void> {
     if (!this.state) throw new IllegalMove('game not started');
-    this.state = applyMove(this.pack, this.state, move, Date.now());
+    this.state = applyMove(this.pack, this.state, move, at);
+    if (this.nudge && this.state.board.some((t) => t.clueId === this.nudge?.clueId))
+      this.nudge = null;
     this.pushViews();
     if (move.type === 'ask-suspect') await this.answerSuspect(move);
     if (this.state.accusation && this.state.phase !== 'reveal') {
@@ -202,6 +258,19 @@ export class Room {
    * a facilitator who plays it twice — a latecomer, a false start — waits only
    * the first time. The screen is handed the beats and does the rest.
    */
+  /**
+   * The act's opening lines, spoken. Made once when the act begins, so the
+   * break card has a voice by the time the room is looking at it.
+   */
+  private async narrateAct(act: 1 | 2 | 3): Promise<void> {
+    const key = `act-${String(act)}`;
+    if (this.voices.has(key)) return;
+    const audio = await narrate(this.pack, this.actDef(act).opening);
+    if (!audio) return;
+    this.voices.set(key, audio);
+    this.pushViews();
+  }
+
   async setPrologue(playing: boolean): Promise<void> {
     const prologue = this.pack.prologue;
     if (!prologue?.beats.length) return;
@@ -345,6 +414,16 @@ export class Room {
             },
           }
         : {}),
+      ...(s ? { actTitle: act.title, actOpening: act.opening } : {}),
+      ...(s && this.voices.has(`act-${String(s.act)}`)
+        ? { actOpeningUrl: `/voice/${this.code}/act-${String(s.act)}.mp3` }
+        : {}),
+      ...(s ? this.lastDecision(s) : {}),
+      ...(this.nudge
+        ? {
+            nudge: `The house has gone quiet. Somebody here is still holding “${this.nudge.title}”.`,
+          }
+        : {}),
       ...(s?.phase === 'commitment'
         ? {
             commitmentPrompt: act.commitment.prompt,
@@ -409,6 +488,11 @@ export class Room {
             },
           }
         : {}),
+      ...(this.nudge?.holder === playerId
+        ? {
+            nudge: `You are still holding “${this.nudge.title}”. The house has gone quiet — this may be the moment.`,
+          }
+        : {}),
       canAccuse: s?.act === 3 && s.phase === 'act' && !s.accusation,
       ...(s?.phase === 'reveal' && this.reveal
         ? {
@@ -420,6 +504,30 @@ export class Room {
             },
           }
         : {}),
+    };
+  }
+
+  /** The most recent closed commitment, as a sentence the room will recognise. */
+  private lastDecision(s: GameState): Pick<ScreenView, 'lastDecision'> {
+    const closed = s.commitments.filter((c) => c.closedAt !== undefined).at(-1);
+    if (!closed) return {};
+    const def = this.pack.acts.find((a) => a.commitment.id === closed.commitmentId)?.commitment;
+    const counts = new Map<string, number>();
+    for (const choice of Object.values(closed.votes))
+      counts.set(choice, (counts.get(choice) ?? 0) + 1);
+    const [winner, votes] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0] ?? ['', 0];
+    if (!winner) return {};
+    const label =
+      def?.options?.find((o) => o.id === winner)?.label ??
+      this.pack.suspects.find((x) => x.id === winner)?.name ??
+      winner;
+    return {
+      lastDecision: {
+        prompt: def?.prompt ?? '',
+        choice: label,
+        votes,
+        of: Object.keys(closed.votes).length,
+      },
     };
   }
 

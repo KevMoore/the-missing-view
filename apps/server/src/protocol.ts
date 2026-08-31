@@ -84,11 +84,23 @@ export interface ScreenView {
     /** Where to fetch this reply spoken aloud. Absent until the audio exists. */
     voiceUrl?: string;
   })[];
+  /** The act's opening lines, and them narrated, for the break card. */
+  actTitle?: string;
+  actOpening?: string;
+  actOpeningUrl?: string;
+  /** What the house settled on last time it was asked. Absent before act 2. */
+  lastDecision?: { prompt: string; choice: string; votes: number; of: number };
   commitmentPrompt?: string;
   commitmentOptions?: { id: string; label: string }[];
   accusation?: Accusation & { culpritName: string };
   /** Only present in phase 'reveal'. */
   reveal?: SharedReveal;
+  /**
+   * A pacing nudge, when an act is running out and the room has gone quiet
+   * (D12). Names the clue but never who is holding it — the room asking "who
+   * has that?" is the point, and exposing somebody is not.
+   */
+  nudge?: string;
   /** The narrated opening, while the facilitator is playing it. */
   prologue?: {
     videoAsset?: string;
@@ -121,6 +133,8 @@ export interface PhoneView {
     myChoice?: string;
   };
   canAccuse: boolean;
+  /** Shown only to the player still holding the clue the house is missing. */
+  nudge?: string;
   privateReveal?: PrivateReveal;
 }
 

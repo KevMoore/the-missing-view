@@ -1070,3 +1070,78 @@ a:hover {
     box-shadow: 0 0 14px -2px rgba(232, 201, 135, 0.45);
   }
 }
+
+/* ---- the beat between one act and the next ---- */
+
+.act-break {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  z-index: 40;
+  animation: act-break-in 900ms ease-out;
+  /* The scene stays visible underneath, but only as an atmosphere. Without a
+     ground of its own the card was unreadable over a lit drawing room. */
+  background:
+    radial-gradient(ellipse at 50% 45%, rgba(13, 11, 9, 0.94) 30%, rgba(13, 11, 9, 0.86) 100%),
+    linear-gradient(180deg, var(--ink) 0%, rgba(13, 11, 9, 0.9) 50%, var(--ink) 100%);
+}
+@keyframes act-break-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.act-break-inner {
+  max-width: 46rem;
+  text-align: center;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.9);
+}
+.act-break-title {
+  font-size: clamp(1.8rem, 5vw, 3rem);
+  margin: 0.4rem 0 1.5rem;
+}
+.act-break-opening {
+  font-family: var(--serif);
+  font-size: clamp(1.05rem, 2vw, 1.5rem);
+  line-height: 1.7;
+  color: var(--cream);
+  margin: 0 0 2rem;
+}
+.act-break-state {
+  border-top: 1px solid var(--panel-edge);
+  border-bottom: 1px solid var(--panel-edge);
+  padding: 1.1rem 0;
+  line-height: 1.8;
+}
+.act-break-state p {
+  margin: 0 0 0.35rem;
+}
+.act-break-state p:last-child {
+  margin-bottom: 0;
+}
+.act-break-count {
+  font-family: var(--serif);
+  font-size: 2.4rem;
+  color: var(--gold);
+  opacity: 0.45;
+  margin-top: 1.6rem;
+}
+
+/*
+ * A pacing prompt. Warm rather than alarming: the room has not done anything
+ * wrong, it has simply gone quiet, and a red banner would read as a failure.
+ */
+.nudge {
+  border-left: 3px solid var(--gold);
+  background: rgba(201, 163, 92, 0.09);
+  padding: 0.65rem 0.9rem;
+  margin: 0 0 0.9rem;
+  line-height: 1.6;
+  font-family: var(--serif);
+  color: var(--cream);
+}

@@ -183,6 +183,8 @@ setInterval(() => {
     alive.delete(socket);
     socket.ping();
   }
+  // Same beat: an act running down with a quiet room gets a prompt (D12).
+  for (const room of rooms.values()) room.considerNudge();
 }, 30_000);
 
 /** Which room each socket belongs to, so the test hook can sever just one game. */
