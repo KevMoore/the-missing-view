@@ -237,6 +237,16 @@ wss.on('connection', (socket: WebSocket) => {
           }
           case 'move': {
             if (!room) throw new IllegalMove('join a room first');
+            // The move carries a playerId and nothing was checking it against
+            // the socket that sent it — while the phone view hands every player
+            // every other player's id, for the whisper list. So any phone could
+            // table another person's clues, vote as them, or accuse as them and
+            // end the game. Identity is known here and nowhere deeper: the room
+            // is also driven by bots, which are the server talking to itself.
+            if (client?.role !== 'phone' || client.playerId === undefined)
+              throw new IllegalMove('players only');
+            if (msg.move.playerId !== client.playerId)
+              throw new IllegalMove('that is not your move to make');
             await room.handleMove(msg.move);
             return;
           }
