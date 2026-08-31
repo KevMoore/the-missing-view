@@ -191,6 +191,13 @@ export interface PlayerCharacter {
    * inheriting Blackwood Hall's. Unset behaves as 'detail'.
    */
   botLean?: BotLean;
+  /**
+   * The voice this character asks questions in, on the big screen. Same field
+   * names and same meaning as on a suspect: `voice` picks the synthesised voice,
+   * `voiceDirection` says how they sound. Omit and the question stays written.
+   */
+  voice?: string;
+  voiceDirection?: string;
 }
 
 /**

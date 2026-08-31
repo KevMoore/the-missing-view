@@ -17,7 +17,7 @@ import {
 } from '@tmv/core';
 import type { ConsoleView, PhoneView, ScreenView, ServerMessage } from './protocol.js';
 import { buildReveal, type RevealBundle } from './reveal.js';
-import { askSuspect, narrate, speakAnswer } from './llm.js';
+import { askSuspect, narrate, speakAnswer, speakQuestion } from './llm.js';
 import { BotDriver, type BotOptions } from './bots.js';
 
 export interface Client {
@@ -146,6 +146,9 @@ export class Room {
   }
 
   private async answerSuspect(move: Extract<Move, { type: 'ask-suspect' }>): Promise<void> {
+    // Started first and not waited on: the question's words are known now, and
+    // the room can be hearing them while the model writes the reply.
+    void this.speakAsk(move.questionId, move.playerId, move.text);
     const history = this.qaHistory.get(move.suspectId) ?? [];
     const { answer, fromBank } = await askSuspect(this.pack, move.suspectId, move.text, history);
     history.push({ question: move.text, answer });
@@ -169,6 +172,16 @@ export class Room {
     // The written answer is already on the screen, so the voice is chased
     // separately: the room reads it while the speech is still being made.
     void this.speak(move.questionId, move.suspectId, answer);
+  }
+
+  /** The asker's question, in the voice of the character they were dealt. */
+  private async speakAsk(questionId: string, playerId: string, text: string): Promise<void> {
+    const characterId = this.state?.players.find((p) => p.id === playerId)?.characterId;
+    if (characterId === undefined) return;
+    const audio = await speakQuestion(this.pack, characterId, text);
+    if (!audio) return;
+    this.voices.set(`ask-${questionId}`, audio);
+    this.pushViews();
   }
 
   private async speak(questionId: string, suspectId: string, answer: string): Promise<void> {
@@ -312,6 +325,9 @@ export class Room {
         ...q,
         byName: names.get(q.by) ?? q.by,
         suspectName: suspectName(q.suspectId),
+        ...(this.voices.has(`ask-${q.id}`)
+          ? { askUrl: `/voice/${this.code}/ask-${q.id}.mp3` }
+          : {}),
         ...(this.voices.has(q.id) ? { voiceUrl: `/voice/${this.code}/${q.id}.mp3` } : {}),
       })),
       ...(this.prologuePlaying && this.pack.prologue

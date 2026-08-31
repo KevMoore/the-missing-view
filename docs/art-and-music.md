@@ -78,7 +78,15 @@ line already in flight, not merely the score.
 ## Voices
 
 Suspects speak aloud on the big screen through `gpt-4o-mini-tts` — roughly
-sixteen seconds an answer, a few pence across a session. Two fields cast them:
+sixteen seconds an answer, a few pence across a session. The player asking is
+spoken too, in the voice of the character they were dealt, so the room hears an
+exchange rather than a caption and a reply. `PlayerCharacter` carries the same
+two fields as a suspect.
+
+The question is generated the moment it is asked, while the model is still
+writing the answer, so the wait is filled by the asking rather than a spinner.
+
+Two fields cast them:
 
 - `Suspect.voice` — which OpenAI voice: `alloy`, `ash`, `ballad`, `coral`,
   `echo`, `fable`, `onyx`, `nova`, `sage`, `shimmer`.

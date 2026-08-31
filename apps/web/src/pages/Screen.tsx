@@ -127,9 +127,14 @@ export function Screen() {
         : 'game';
   useMusic(cue, muted, view?.music);
 
-  // The suspects speak here and nowhere else, for the same reason the score does.
+  // The suspects speak here and nowhere else, for the same reason the score
+  // does. Question before reply, in the order they were asked — the queue plays
+  // this list strictly in turn, so the order here is the order the room hears.
   const voiceUrls = useMemo(
-    () => (view?.questions ?? []).map((q) => q.voiceUrl).filter((u): u is string => Boolean(u)),
+    () =>
+      (view?.questions ?? []).flatMap((q) =>
+        [q.askUrl, q.voiceUrl].filter((u): u is string => Boolean(u)),
+      ),
     [view?.questions],
   );
   useSuspectVoices(voiceUrls, joined, muted);

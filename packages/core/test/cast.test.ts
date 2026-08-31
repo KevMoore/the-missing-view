@@ -143,3 +143,32 @@ describe('the voices are of these islands', () => {
     }
   });
 });
+
+describe('the players have voices too', () => {
+  it('casts and directs every role, so a question is asked aloud', () => {
+    for (const c of DECO_1920S_CHARACTERS) {
+      expect(c.voice, c.name).toBeTruthy();
+      expect(c.voiceDirection, c.name).toBeTruthy();
+    }
+  });
+
+  it('spreads them across the whole set of voices', () => {
+    const used = new Set(DECO_1920S_CHARACTERS.map((c) => c.voice));
+    expect(used.size, 'the roles share too few voices to tell apart').toBeGreaterThanOrEqual(8);
+  });
+
+  it('gives no two roles the same voice and the same direction', () => {
+    const pairs = DECO_1920S_CHARACTERS.map((c) => `${c.voice ?? ''}|${c.voiceDirection ?? ''}`);
+    expect(new Set(pairs).size).toBe(pairs.length);
+  });
+
+  it('describes where each of them is from', () => {
+    // The one American is deliberate — she is written as the outsider with no
+    // English reverence, and that is the whole point of her.
+    const PLACES =
+      /British|English|Irish|Scottish|Welsh|London|Fleet Street|Midlands|Cambridge|county|American|East Coast/i;
+    for (const c of DECO_1920S_CHARACTERS) expect(c.voiceDirection ?? '', c.name).toMatch(PLACES);
+    const american = DECO_1920S_CHARACTERS.filter((c) => /American/i.test(c.voiceDirection ?? ''));
+    expect(american.map((c) => c.id)).toEqual(['pc-heiress']);
+  });
+});

@@ -203,6 +203,48 @@ export async function speakAnswer(
   }
 }
 
+/**
+ * A player's question, in the voice of the character they were dealt.
+ *
+ * Worth the extra call for two reasons. The room hears an exchange between two
+ * people rather than a caption followed by a voice; and the question's text is
+ * known the instant it is asked, so this is generated while the model is still
+ * writing the reply — the wait is filled by the asking rather than by a
+ * spinner.
+ */
+export async function speakQuestion(
+  pack: CasePack,
+  characterId: string,
+  text: string,
+): Promise<Buffer | null> {
+  const character = pack.characters.find((c) => c.id === characterId);
+  if (process.env.TMV_TEST) return TEST_TONE;
+  if (!client || !character?.voice || !text) return null;
+  try {
+    const speech = await client.audio.speech.create(
+      {
+        model: SPEECH_MODEL,
+        voice: character.voice,
+        input: text,
+        instructions: [
+          BRITISH,
+          `You are ${character.name}, ${character.role}, questioning a suspect in an English country house in 1926.`,
+          character.voiceDirection,
+          'Ask the question as this person would ask it. Do not answer it, and add no words.',
+        ]
+          .filter(Boolean)
+          .join(' '),
+        response_format: 'mp3',
+      },
+      { timeout: 20_000 },
+    );
+    return Buffer.from(await speech.arrayBuffer());
+  } catch (err) {
+    console.warn('[llm] speakQuestion produced no audio:', describe(err));
+    return null;
+  }
+}
+
 /** One beat of the opening, in the narrator's voice. Null on any failure. */
 export async function narrate(pack: CasePack, text: string): Promise<Buffer | null> {
   const prologue = pack.prologue;

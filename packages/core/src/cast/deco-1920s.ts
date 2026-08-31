@@ -36,6 +36,9 @@ export const DECO_1920S_CHARACTERS: PlayerCharacter[] = [
     briefing:
       'You came for the pheasant. You stayed because nobody else in this house knows how a crime scene works. Old habits are waking up.',
     botLean: 'interrogate',
+    voice: 'onyx',
+    voiceDirection:
+      'British, London — a man of sixty-two, thirty years in the Metropolitan Police. Low, worn, entirely unhurried. Asks a question and then waits, which is the trick.',
   },
   {
     id: 'pc-journalist',
@@ -45,6 +48,9 @@ export const DECO_1920S_CHARACTERS: PlayerCharacter[] = [
     briefing:
       'You smelt a story at dinner before anyone died. Now you have the story of the year — if you can untangle it before the police take it from you.',
     botLean: 'theorise',
+    voice: 'ash',
+    voiceDirection:
+      'British, Fleet Street — a man of forty, fast and slightly clipped, the vowels flattened by years of shouting down a telephone. Sceptical by default.',
   },
   {
     id: 'pc-heiress',
@@ -54,6 +60,9 @@ export const DECO_1920S_CHARACTERS: PlayerCharacter[] = [
     briefing:
       'Everyone here performs politeness like a religion. You don’t share it, which means you see what they hide behind it.',
     botLean: 'challenge',
+    voice: 'nova',
+    voiceDirection:
+      'The one American in the house, and she knows it. East Coast, moneyed, bright and quick, with none of the English habit of softening a question before asking it.',
   },
   {
     id: 'pc-solicitor',
@@ -63,6 +72,9 @@ export const DECO_1920S_CHARACTERS: PlayerCharacter[] = [
     briefing:
       'The papers in your case were urgent enough to send you through a snowstorm. You know more about this family’s affairs than anyone here suspects.',
     botLean: 'detail',
+    voice: 'echo',
+    voiceDirection:
+      "British, careful clerk's English — a young man of twenty-six, precise and a little too polite, pitched high when nervous. Reads a fact out as though it were a citation.",
   },
   {
     id: 'pc-vicar',
@@ -72,6 +84,9 @@ export const DECO_1920S_CHARACTERS: PlayerCharacter[] = [
     briefing:
       'People tell you things. They always have. Tonight, listening may matter more than it ever has from the pulpit.',
     botLean: 'listen',
+    voice: 'fable',
+    voiceDirection:
+      'British, gentle rural parish — a man of fifty-five, warm and unhurried, with the practised calm of somebody used to being told difficult things.',
   },
   {
     id: 'pc-governess',
@@ -81,6 +96,9 @@ export const DECO_1920S_CHARACTERS: PlayerCharacter[] = [
     briefing:
       'The household barely notices you, which is its mistake. You notice everything, and you were awake past midnight.',
     botLean: 'detail',
+    voice: 'sage',
+    voiceDirection:
+      'British, quiet and exact — a woman of thirty-four, softly spoken and never hurried. Says less than she knows, and always has.',
   },
   {
     id: 'pc-engineer',
@@ -90,6 +108,9 @@ export const DECO_1920S_CHARACTERS: PlayerCharacter[] = [
     briefing:
       'A stranger to all of them, obliged to none of them. You measure people the way you measure machines: by what they do under load.',
     botLean: 'challenge',
+    voice: 'ballad',
+    voiceDirection:
+      'British, Midlands under the polish — a man of forty-two, practical and level, the rhythm of somebody explaining a machine to somebody who does not understand machines.',
   },
   {
     id: 'pc-companion',
@@ -99,6 +120,9 @@ export const DECO_1920S_CHARACTERS: PlayerCharacter[] = [
     briefing:
       'You have spent years being agreeable in drawing rooms. You know exactly what it costs to hold a smile in place — and you can tell when someone else is paying it.',
     botLean: 'listen',
+    voice: 'shimmer',
+    voiceDirection:
+      'British, genteel and worn thin — a woman of forty-six, light and pleasant on the surface with something tired underneath. Trained to be agreeable, and audibly so.',
   },
   {
     id: 'pc-driver',
@@ -108,6 +132,9 @@ export const DECO_1920S_CHARACTERS: PlayerCharacter[] = [
     briefing:
       'You have walked away from two crashes and one engagement. You are the only person here who is not frightened of being wrong out loud, which makes you useful tonight.',
     botLean: 'challenge',
+    voice: 'coral',
+    voiceDirection:
+      'British, fast and fearless — a woman of twenty-six, bright, loud, laughing at the edges of her sentences. Says the unsayable thing first.',
   },
   {
     id: 'pc-actress',
@@ -117,6 +144,9 @@ export const DECO_1920S_CHARACTERS: PlayerCharacter[] = [
     briefing:
       'You have played guilt, grief and innocence for money. You know what all three look like when they are real, and you know what they look like when they are not.',
     botLean: 'theorise',
+    voice: 'nova',
+    voiceDirection:
+      'British, West End — a woman of thirty-four, beautifully produced and slightly too resonant for a drawing room. Every line has been placed.',
   },
   {
     id: 'pc-archaeologist',
@@ -126,6 +156,9 @@ export const DECO_1920S_CHARACTERS: PlayerCharacter[] = [
     briefing:
       'You reconstruct whole lives from a broken cup and a burial angle. A house full of people who have tidied the evidence is simply a worse-behaved dig.',
     botLean: 'detail',
+    voice: 'sage',
+    voiceDirection:
+      'British, academic — a woman of forty-one, dry, patient, sun-worn. Speaks in complete sentences and leaves long gaps between them.',
   },
   {
     id: 'pc-barrister',
@@ -135,6 +168,9 @@ export const DECO_1920S_CHARACTERS: PlayerCharacter[] = [
     briefing:
       'You have hanged three men and freed a guiltier one. You do not believe confessions and you do not believe coincidences, and you will say so.',
     botLean: 'interrogate',
+    voice: 'onyx',
+    voiceDirection:
+      'British, the Bar — a man of fifty-five, deep and deliberate, every word weighed before it is spent. Asks questions he already knows the answer to.',
   },
   {
     id: 'pc-nurse',
@@ -144,6 +180,9 @@ export const DECO_1920S_CHARACTERS: PlayerCharacter[] = [
     briefing:
       'You have seen more dead men than everyone else in this house combined. The body downstairs does not frighten you, and what it tells you is very specific.',
     botLean: 'detail',
+    voice: 'shimmer',
+    voiceDirection:
+      'British, calm to the point of flat — a woman of thirty-eight who has seen worse. Steady, quiet, entirely unshockable, no drama in it whatsoever.',
   },
   {
     id: 'pc-novelist',
@@ -153,6 +192,9 @@ export const DECO_1920S_CHARACTERS: PlayerCharacter[] = [
     briefing:
       'You have plotted forty murders and published nine. You know how a real one differs from a good one — and which mistakes only an amateur makes.',
     botLean: 'theorise',
+    voice: 'coral',
+    voiceDirection:
+      'British, quick and amused — a woman of twenty-nine, wry, a little untidy in her speech, ideas arriving faster than she can order them.',
   },
   {
     id: 'pc-chauffeur',
@@ -162,6 +204,9 @@ export const DECO_1920S_CHARACTERS: PlayerCharacter[] = [
     briefing:
       'You saw who arrived, at what hour, in what state, and carrying what. Nobody upstairs has thought to ask you, because nobody upstairs thinks about you at all.',
     botLean: 'listen',
+    voice: 'ash',
+    voiceDirection:
+      'British, London south of the river — a man of thirty-one, quiet, watchful, economical. Speaks rarely, and only when it is worth it.',
   },
   {
     id: 'pc-debutante',
@@ -171,6 +216,9 @@ export const DECO_1920S_CHARACTERS: PlayerCharacter[] = [
     briefing:
       'Everyone talks in front of you as though you were furniture. You have been collecting what they say for two seasons and you forget nothing.',
     botLean: 'listen',
+    voice: 'coral',
+    voiceDirection:
+      'British, expensively finished — a girl of nineteen, light and quick and much sharper than she is allowed to sound. Rises at the end of sentences.',
   },
   {
     id: 'pc-spiritualist',
@@ -180,6 +228,9 @@ export const DECO_1920S_CHARACTERS: PlayerCharacter[] = [
     briefing:
       'Your trade is reading a room, then telling it what it already believes. You are a fraud with a genuine skill, and tonight the skill is the useful half.',
     botLean: 'theorise',
+    voice: 'shimmer',
+    voiceDirection:
+      'British, theatrical mystic — a woman of fifty-two, low, slow, deliberately hypnotic, every phrase given more weight than it can carry.',
   },
   {
     id: 'pc-landagent',
@@ -189,6 +240,9 @@ export const DECO_1920S_CHARACTERS: PlayerCharacter[] = [
     briefing:
       'You know what the estate earns, what it owes, and which of these people has been quietly ruined. Money is the only motive you have ever needed to look for.',
     botLean: 'detail',
+    voice: 'echo',
+    voiceDirection:
+      'British, county — a man of forty-seven, plain, weathered, unimpressed. Talks about people the way he talks about drainage.',
   },
   {
     id: 'pc-botanist',
@@ -198,6 +252,9 @@ export const DECO_1920S_CHARACTERS: PlayerCharacter[] = [
     briefing:
       'Forty years of naming things exactly. You will not say "some kind of powder" when you can say which, and you will not let anyone else get away with it either.',
     botLean: 'detail',
+    voice: 'fable',
+    voiceDirection:
+      'British, Cambridge — a man of sixty-three, precise and gentle, delighted by exactness. Pauses to choose the correct word rather than the near one.',
   },
   {
     id: 'pc-operator',
@@ -207,6 +264,9 @@ export const DECO_1920S_CHARACTERS: PlayerCharacter[] = [
     briefing:
       'Every call this house made this week went through your board. You are not supposed to listen. You listened.',
     botLean: 'interrogate',
+    voice: 'sage',
+    voiceDirection:
+      'British, small-town exchange — a woman of twenty-four, brisk and clear, the enunciation of somebody used to being misheard down a wire.',
   },
 ];
 

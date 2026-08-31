@@ -79,6 +79,8 @@ export interface ScreenView {
   questions: (SuspectQuestion & {
     byName: string;
     suspectName: string;
+    /** The question, in the asker's own character voice. Plays before the reply. */
+    askUrl?: string;
     /** Where to fetch this reply spoken aloud. Absent until the audio exists. */
     voiceUrl?: string;
   })[];
