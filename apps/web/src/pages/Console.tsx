@@ -205,7 +205,13 @@ export function Console() {
           <div className={`setup-step${view?.screenConnected ? ' done' : ''}`}>
             <span className="num">{view?.screenConnected ? '✓' : '1'}</span>
             <span className="what">
-              <strong>{remote ? 'Open the screen and share it.' : 'Open the big screen.'}</strong>
+              <strong>
+                {view?.mode === 'two-houses'
+                  ? 'Open a big screen for each house.'
+                  : remote
+                    ? 'Open the screen and share it.'
+                    : 'Open the big screen.'}
+              </strong>
               <span className="muted small" style={{ display: 'block', lineHeight: 1.7 }}>
                 {view?.screenConnected
                   ? remote
@@ -220,15 +226,41 @@ export function Console() {
                     ? ' in a second tab, then share that tab in your call with sound on.'
                     : ' — the art, the music, the room code and the QR code all live there.')}
               </span>
-              {!view?.screenConnected && (
-                <button
-                  className="ghost mt"
-                  onClick={() => {
-                    window.open(screenUrl, '_blank', 'noopener');
-                  }}
-                >
-                  Open the big screen ↗
-                </button>
+              {/* Two houses need two displays, out of each other's sight. One
+                  screen showing both boards would hand each team the other's
+                  evidence, which is the whole thing the head-to-head is for. */}
+              {view?.mode === 'two-houses' ? (
+                <>
+                  <span className="muted small" style={{ display: 'block', lineHeight: 1.7 }}>
+                    One each, on separate displays, where neither team can read the other’s. Each
+                    screen shows only its own house’s board — but a team can still read a screen
+                    they can see.
+                  </span>
+                  <div className="row mt" style={{ gap: '0.5rem', flexWrap: 'wrap' }}>
+                    {view.houses.map((h) => (
+                      <button
+                        key={h.id}
+                        className="ghost"
+                        onClick={() => {
+                          window.open(`${screenUrl}&house=${h.id}`, '_blank', 'noopener');
+                        }}
+                      >
+                        Open {h.name}’s screen ↗
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                !view?.screenConnected && (
+                  <button
+                    className="ghost mt"
+                    onClick={() => {
+                      window.open(screenUrl, '_blank', 'noopener');
+                    }}
+                  >
+                    Open the big screen ↗
+                  </button>
+                )
               )}
             </span>
           </div>

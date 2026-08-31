@@ -235,7 +235,11 @@ wss.on('connection', (socket: WebSocket) => {
               client = { role: 'phone', playerId, send };
               send({ type: 'joined', playerId, roomCode: room.code });
             } else {
-              client = { role: msg.role, send };
+              client = {
+                role: msg.role,
+                ...(msg.houseId !== undefined ? { houseId: msg.houseId } : {}),
+                send,
+              };
             }
             room.addClient(client);
             return;
@@ -311,6 +315,13 @@ wss.on('connection', (socket: WebSocket) => {
           case 'name-house': {
             if (!room || client?.role !== 'console') throw new IllegalMove('facilitator only');
             room.nameHouse(msg.houseId, msg.name);
+            return;
+          }
+          case 'watch-house': {
+            if (!room || client?.role !== 'screen') throw new IllegalMove('screens only');
+            if (msg.houseId === undefined) delete client.houseId;
+            else client.houseId = msg.houseId;
+            client.send(room.screenView(client.houseId));
             return;
           }
           case 'email-optin': {

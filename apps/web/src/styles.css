@@ -1298,6 +1298,20 @@ a:hover {
   padding: 0.4rem 0.7rem;
   font-size: 0.85rem;
   line-height: 1.35;
+  /* Not a call to action: a row in a list you can point at. The filled gold
+     button is for the one thing on a page you want pressed. */
+  background: var(--ink-2);
+  color: var(--cream);
+  border: 1px solid var(--panel-edge);
+  text-transform: none;
+  letter-spacing: normal;
+}
+.seat strong {
+  color: var(--cream);
+  font-weight: 500;
+}
+.seat.bare strong {
+  color: var(--cream-dim);
 }
 .seat.bare {
   border-style: dashed;
@@ -1331,6 +1345,16 @@ a:hover {
   overflow: hidden;
   text-align: left;
   line-height: 1.35;
+  background: var(--ink-2);
+  color: var(--cream);
+  border: 1px solid var(--panel-edge);
+  text-transform: none;
+  letter-spacing: normal;
+}
+.cast-card:disabled {
+  /* The default disabled treatment greys the whole card, portrait included,
+     which is already what `.gone` says more precisely. */
+  filter: none;
 }
 .cast-card img {
   width: 100%;
@@ -1395,8 +1419,19 @@ a:hover {
 .house-columns {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 1.4rem;
+  gap: 1.1rem;
   align-items: start;
+}
+/* The rail is a full-width band here rather than one of three columns, so the
+   portraits have to give up most of their height or both houses start below
+   the fold — and the boards are what the two teams are actually looking at. */
+.house-columns .suspect img {
+  aspect-ratio: 5 / 3;
+  object-fit: cover;
+  object-position: center 22%;
+}
+.house-columns .suspect .bio {
+  display: none;
 }
 .houses {
   display: grid;
@@ -1429,6 +1464,16 @@ a:hover {
   color: var(--cream-dim);
   letter-spacing: 0.1em;
   text-transform: uppercase;
+}
+.house-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.9rem;
+  align-items: start;
+  min-width: 0;
+}
+.house-body > div {
+  min-width: 0;
 }
 .card.accused {
   border-color: var(--blood);
@@ -1488,4 +1533,33 @@ a:hover {
   border-bottom: 1px solid var(--panel-edge);
   padding-bottom: 0.4rem;
   margin: 0 0 0.5rem;
+}
+
+/* Two houses, two recaps on the act-break card. */
+.split-state {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  text-align: left;
+}
+.split-state > p {
+  grid-column: 1 / -1;
+  text-align: center;
+}
+.act-break-house {
+  font-family: var(--serif);
+  color: var(--gold-bright);
+  font-size: 1.2rem;
+  margin-bottom: 0.3rem;
+}
+
+/* Whose big screen this is, when two houses each have one. */
+.screen-house {
+  font-family: var(--serif);
+  font-size: 1.7rem;
+  color: var(--gold-bright);
+  letter-spacing: 0.08em;
+  border: 1px solid var(--gold);
+  padding: 0.25rem 1rem;
+  margin-right: 1.2rem;
 }

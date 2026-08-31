@@ -31,6 +31,12 @@ import type { BotOptions } from './bots.js';
 export interface Client {
   role: 'phone' | 'screen' | 'console';
   playerId?: string;
+  /**
+   * For a screen: the one house it is showing. Filtered here rather than in the
+   * browser — a view that reaches a client has reached it, whatever the CSS
+   * does about it afterwards (D20, D40).
+   */
+  houseId?: string;
   send: (msg: ServerMessage) => void;
 }
 
@@ -355,7 +361,7 @@ export class Room {
 
   pushViews(): void {
     for (const c of this.clients) {
-      if (c.role === 'screen') c.send(this.screenView());
+      if (c.role === 'screen') c.send(this.screenView(c.houseId));
       else if (c.role === 'console') c.send(this.consoleView());
       else if (c.playerId) {
         const view = this.phoneView(c.playerId);
@@ -441,14 +447,17 @@ export class Room {
   }
 
   /** Both houses' questions, newest last, each tagged with who asked. */
-  private allQuestions() {
+  private allQuestions(from: readonly Table[] = this.tables) {
+    // The tag says which house asked, and is worth nothing on a screen that is
+    // only ever showing one.
+    const tag = this.mode === 'two-houses' && from.length > 1;
     const names = this.names();
-    const rows = this.tables.flatMap((table) =>
+    const rows = from.flatMap((table) =>
       (table.state?.questions ?? []).map((q) => ({
         ...q,
         byName: names.get(q.by) ?? q.by,
         suspectName: this.suspectName(q.suspectId),
-        ...(this.mode === 'two-houses' ? { houseName: table.name } : {}),
+        ...(tag ? { houseName: table.name } : {}),
         ...(this.voices.has(table.voiceKey(`ask-${q.id}`))
           ? { askUrl: `/voice/${this.code}/${table.voiceKey(`ask-${q.id}`)}.mp3` }
           : {}),
@@ -471,16 +480,23 @@ export class Room {
     return compareHouses({ caseId: this.pack.id, seed: this.seed, mode: this.mode, houses });
   }
 
-  screenView(): ScreenView {
+  /**
+   * @param watching the one house this screen shows. Undefined shows them all,
+   * which is right for one-house play and for a facilitator's own monitor.
+   */
+  screenView(watching?: string): ScreenView {
+    const shown =
+      watching === undefined ? this.tables : this.tables.filter((t) => t.id === watching);
     const s = this.lead;
     const act = this.actDef(s?.act ?? 1);
     const scene = this.sceneAsset();
-    const first = this.tables[0];
+    const first = shown[0] ?? this.tables[0];
     const comparison = this.comparison();
-    const nudge = this.tables.find((t) => t.nudge)?.nudge;
+    const nudge = shown.find((t) => t.nudge)?.nudge;
     return {
       type: 'screen-view',
       roomCode: this.code,
+      mode: this.mode,
       phase: s?.phase ?? 'lobby',
       act: s?.act ?? 1,
       ...(s?.actStartedAt !== undefined ? { actStartedAt: s.actStartedAt } : {}),
@@ -500,7 +516,11 @@ export class Room {
       players: this.started
         ? this.housePlayers(first)
         : this.lobby.map((p) => ({ id: p.id, name: p.name, characterName: '' })),
-      houses: this.tables.map((t) => ({
+      ...(this.mode === 'two-houses'
+        ? { houseChoices: this.tables.map((t) => ({ id: t.id, name: t.name })) }
+        : {}),
+      ...(watching !== undefined ? { watching } : {}),
+      houses: shown.map((t) => ({
         id: t.id,
         name: t.name,
         players: this.housePlayers(t),
@@ -532,7 +552,7 @@ export class Room {
       })),
       board: this.houseBoard(first),
       theories: this.houseTheories(first),
-      questions: this.allQuestions(),
+      questions: this.allQuestions(shown),
       ...(this.prologuePlaying && this.pack.prologue
         ? {
             prologue: {

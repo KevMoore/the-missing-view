@@ -112,6 +112,24 @@ export function Screen() {
     () => new URLSearchParams(location.search).get('code')?.toUpperCase() ?? '',
   );
   const [now, setNow] = useState(Date.now());
+  /**
+   * Which house this screen belongs to. With two houses playing head to head,
+   * one screen showing both boards hands each team the other's work (D40) — so
+   * a screen picks a house and the server sends it nothing else.
+   */
+  const [watching, setWatching] = useState<string | null>(
+    () =>
+      new URLSearchParams(location.search).get('house') ??
+      sessionStorage.getItem('tmv-screen-house'),
+  );
+  /**
+   * Whether this screen has answered the question at all. Distinct from
+   * `watching`, because "both houses" is a real answer — the facilitator's own
+   * monitor — and is indistinguishable from "not asked yet" without it.
+   */
+  const [choseHouse, setChoseHouse] = useState(
+    () => sessionStorage.getItem('tmv-screen-house-chosen') === '1',
+  );
   const [muted, setMuted] = useState(() => sessionStorage.getItem('tmv-muted') === '1');
   const short = useShortScreen();
   /**
@@ -124,9 +142,16 @@ export function Screen() {
     [houses],
   );
   // One full card, always: with a painting on it, two will not fit anywhere.
-  const caps = short
-    ? { questions: 2, theories: 3, boardFull: 1, boardSlim: 3 }
-    : { questions: 3, theories: 5, boardFull: 1, boardSlim: 7 };
+  // Two houses share the height between them, so each shows less of everything
+  // — a column that runs off the bottom is a column nobody in the room reads.
+  const caps =
+    houses.length > 1
+      ? short
+        ? { questions: 1, theories: 1, boardFull: 1, boardSlim: 2 }
+        : { questions: 2, theories: 2, boardFull: 1, boardSlim: 3 }
+      : short
+        ? { questions: 2, theories: 3, boardFull: 1, boardSlim: 3 }
+        : { questions: 3, theories: 5, boardFull: 1, boardSlim: 7 };
 
   // The menu theme carries the lobby; play drops it under the room's talking.
   const cue: MusicCue = !joined
@@ -201,9 +226,22 @@ export function Screen() {
     },
     () => {
       const roomCode = sessionStorage.getItem('tmv-screen-room');
-      return roomCode ? { type: 'join', role: 'screen', roomCode } : null;
+      const house = sessionStorage.getItem('tmv-screen-house');
+      return roomCode
+        ? { type: 'join', role: 'screen', roomCode, ...(house ? { houseId: house } : {}) }
+        : null;
     },
   );
+
+  // A screen given its house in the URL — the console's own link — has answered
+  // the question already and should never be asked it.
+  useEffect(() => {
+    if (watching !== null && !choseHouse) {
+      sessionStorage.setItem('tmv-screen-house', watching);
+      sessionStorage.setItem('tmv-screen-house-chosen', '1');
+      setChoseHouse(true);
+    }
+  }, [watching, choseHouse]);
 
   // A screen that reloaded mid-game resumed straight past the join click, so
   // there was no gesture to unlock audio with. Take the next one instead.
@@ -257,7 +295,12 @@ export function Screen() {
                 unlockSpeech();
                 const roomCode = codeInput.trim().toUpperCase();
                 sessionStorage.setItem('tmv-screen-room', roomCode);
-                send({ type: 'join', role: 'screen', roomCode });
+                send({
+                  type: 'join',
+                  role: 'screen',
+                  roomCode,
+                  ...(watching !== null ? { houseId: watching } : {}),
+                });
                 setJoined(true);
               }}
             >
@@ -284,6 +327,68 @@ export function Screen() {
               </button>
             </form>
           </div>
+        </div>
+      </>
+    );
+  }
+
+  // A screen that joined a two-house game without saying which house shows
+  // nothing until it does. Both boards on one display would undo the whole
+  // point of running two houses (D40).
+  if (
+    view?.mode === 'two-houses' &&
+    !choseHouse &&
+    view.watching === undefined &&
+    view.houseChoices
+  ) {
+    return (
+      <>
+        {chrome}
+        <div className="stage center" style={{ maxWidth: 620 }}>
+          <h1 className="title" style={{ fontSize: '2.2rem' }}>
+            Which house is this screen for?
+          </h1>
+          <p className="muted mb" style={{ lineHeight: 1.7 }}>
+            Two houses are playing the same case against each other. Each needs its own screen, out
+            of the other one’s sight — this screen will show that house’s board and nothing else.
+          </p>
+          <div className="row" style={{ justifyContent: 'center', gap: '1rem' }}>
+            {view.houseChoices.map((h) => (
+              <button
+                key={h.id}
+                onClick={() => {
+                  unlockSpeech();
+                  sessionStorage.setItem('tmv-screen-house', h.id);
+                  sessionStorage.setItem('tmv-screen-house-chosen', '1');
+                  setWatching(h.id);
+                  setChoseHouse(true);
+                  send({ type: 'watch-house', houseId: h.id });
+                }}
+              >
+                {h.name}
+              </button>
+            ))}
+          </div>
+          <p className="muted small mt" style={{ lineHeight: 1.7 }}>
+            Only one screen in the room? Then the two teams will read each other’s evidence, and the
+            head-to-head is not really one. Open a second window on a second display, or run the
+            one-house game instead.
+          </p>
+          {/* The facilitator wants both, and is the one person in the room
+              allowed to see both. Not a default, and not on the wall. */}
+          <button
+            className="ghost"
+            onClick={() => {
+              unlockSpeech();
+              sessionStorage.removeItem('tmv-screen-house');
+              sessionStorage.setItem('tmv-screen-house-chosen', '1');
+              setWatching(null);
+              setChoseHouse(true);
+              send({ type: 'watch-house' });
+            }}
+          >
+            I am the facilitator — show me both
+          </button>
         </div>
       </>
     );
@@ -334,6 +439,10 @@ export function Screen() {
             Act {view.act} — {actTitle(view.act)}
           </div>
         </div>
+        {/* Whose screen this is. A house-scoped screen otherwise looks exactly
+            like a one-house game, and a team walking past should know at a
+            glance that they are looking at the wrong board. */}
+        {view.watching !== undefined && <div className="screen-house">{houses[0]?.name ?? ''}</div>}
         <div className={`timer ${isLate(view, now) ? 'late' : ''}`}>
           {remaining(view.actStartedAt, view.actMinutes, now)}
         </div>
@@ -450,8 +559,16 @@ export function Screen() {
                     <p>“{h.accusation.motive}”</p>
                   </div>
                 )}
-                <TheoryColumn house={h} cast={cast} caps={caps} arrivals={theories} />
-                <BoardColumn house={h} cast={cast} caps={caps} arrivals={board} />
+                {/* Theories and evidence side by side inside the house, so a
+                    team can see both without the board falling off the screen. */}
+                <div className="house-body">
+                  <div>
+                    <TheoryColumn house={h} cast={cast} caps={caps} arrivals={theories} />
+                  </div>
+                  <div>
+                    <BoardColumn house={h} cast={cast} caps={caps} arrivals={board} />
+                  </div>
+                </div>
               </section>
             ))}
           </div>

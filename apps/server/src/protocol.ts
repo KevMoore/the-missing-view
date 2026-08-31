@@ -21,7 +21,14 @@ export type { Music, SessionMode, HouseResult } from '@tmv/core';
 
 export type ClientMessage =
   | { type: 'join'; role: 'phone'; roomCode: string; name: string; playerId?: string }
-  | { type: 'join'; role: 'screen' | 'console'; roomCode: string }
+  /**
+   * A screen may belong to one house. With two houses playing head to head,
+   * one screen showing both boards hands each team the other's work — the
+   * server keeps them apart and then the display puts them back together (D40).
+   */
+  | { type: 'join'; role: 'screen' | 'console'; roomCode: string; houseId?: string }
+  /** Point an already-connected screen at a house, or at both. */
+  | { type: 'watch-house'; houseId?: string }
   | {
       type: 'create-room';
       caseId: string;
@@ -71,6 +78,11 @@ export interface PublicSuspect {
 export interface ScreenView {
   type: 'screen-view';
   roomCode: string;
+  mode: SessionMode;
+  /** Every house in the session, names only — enough to offer the choice. */
+  houseChoices?: { id: string; name: string }[];
+  /** Which house this screen is showing. Absent means all of them. */
+  watching?: string;
   phase: Phase;
   act: 1 | 2 | 3;
   actStartedAt?: number;

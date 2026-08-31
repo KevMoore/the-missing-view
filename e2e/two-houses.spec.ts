@@ -93,3 +93,73 @@ test('the facilitator casts a player and moves them between houses', async ({ br
   // Ana is playing the part she was given, not one drawn from the hat.
   await expect(phones[0]!.getByText(characterName).first()).toBeVisible();
 });
+
+test('a screen shows one house and is not sent the other', async ({ browser }) => {
+  test.setTimeout(120_000);
+  const { facilitator, phones, code } = await openTwoHouseRoom(browser);
+  await facilitator.getByRole('button', { name: /Start Act 1/ }).click();
+
+  // Every frame this screen is sent. The claim is about what crosses the wire,
+  // not about what the page decided to render: a board that reached the browser
+  // has reached the team sitting in front of it.
+  const screen = await browser.newPage();
+  const frames: string[] = [];
+  screen.on('websocket', (ws) => {
+    ws.on('framereceived', (f) => {
+      if (typeof f.payload === 'string') frames.push(f.payload);
+    });
+  });
+  await screen.goto(`/screen?code=${code}&house=h1`);
+  await screen.getByRole('button', { name: 'Take the stage' }).click();
+  await expect(screen.getByText('House One')).toBeVisible();
+  await expect(screen.getByText('House Two')).toBeHidden();
+
+  // Ben is in the second house. What he tables must never reach this screen.
+  const ben = phones[1]!;
+  await ben.getByRole('button', { name: 'theories' }).click();
+  await ben.getByLabel('Propose a theory').fill('A theory from the other house');
+  await ben.getByRole('button', { name: 'Table the theory' }).click();
+
+  // Ana is in the first house, so hers is how we know the screen is still live.
+  const ana = phones[0]!;
+  await ana.getByRole('button', { name: 'theories' }).click();
+  await ana.getByLabel('Propose a theory').fill('A theory from this house');
+  await ana.getByRole('button', { name: 'Table the theory' }).click();
+  await expect(screen.getByText('A theory from this house')).toBeVisible();
+
+  expect(
+    frames.some((f) => f.includes('A theory from the other house')),
+    'the other house’s theory was sent to this screen',
+  ).toBe(false);
+});
+
+test('a screen with no house is asked which one, and shows nothing until it says', async ({
+  browser,
+}) => {
+  test.setTimeout(120_000);
+  const { facilitator, code } = await openTwoHouseRoom(browser);
+  await facilitator.getByRole('button', { name: /Start Act 1/ }).click();
+
+  const screen = await browser.newPage();
+  await screen.goto(`/screen?code=${code}`);
+  await screen.getByRole('button', { name: 'Take the stage' }).click();
+
+  await expect(screen.getByText('Which house is this screen for?')).toBeVisible();
+  await expect(screen.getByText('THE SUSPECTS')).toBeHidden();
+
+  await screen.getByRole('button', { name: 'House Two', exact: true }).click();
+  await expect(screen.getByText('Which house is this screen for?')).toBeHidden();
+  await expect(screen.locator('.screen-house')).toHaveText('House Two');
+
+  // The facilitator's own monitor is allowed both, and asking again is how you
+  // get it — so the choice has to survive being made.
+  // Its own context: the screen remembers its house in sessionStorage, and a
+  // second monitor is a second machine, not a second tab.
+  const monitor = await (await browser.newContext()).newPage();
+  await monitor.goto(`/screen?code=${code}`);
+  await monitor.getByRole('button', { name: 'Take the stage' }).click();
+  await monitor.getByRole('button', { name: /show me both/ }).click();
+  await expect(monitor.getByText('Which house is this screen for?')).toBeHidden();
+  await expect(monitor.getByText('House One')).toBeVisible();
+  await expect(monitor.getByText('House Two')).toBeVisible();
+});
