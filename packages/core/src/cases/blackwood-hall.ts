@@ -43,10 +43,10 @@ export const blackwoodHall: CasePack = {
         'etiquette. Never raises her voice; lowers it instead.',
       voice: 'sage',
       voiceDirection:
-        'A woman of about forty. Upper-class English, Received Pronunciation, every ' +
-        'vowel paid for. Cool, slow and perfectly level — the voice of someone who has ' +
-        'never once had to raise it. Drops in pitch when annoyed rather than rising. ' +
-        'Small pauses before she answers, as though the question were slightly vulgar.',
+        'British, Received Pronunciation of the sharpest kind — a woman of about forty with ' +
+        'every vowel paid for. Cool, slow and perfectly level; the voice of someone who has ' +
+        'never once had to raise it. Drops in pitch when annoyed rather than rising. Small ' +
+        'pauses before she answers, as though the question were slightly vulgar.',
       knowledge: {
         knows: [
           'She retired at half past ten and heard raised voices from the study around midnight — a man and a woman.',
@@ -101,9 +101,9 @@ export const blackwoodHall: CasePack = {
         'Becomes defensive when the war or money is raised.',
       voice: 'ash',
       voiceDirection:
-        'A man of thirty-eight, army officer class, clipped and forward-placed. Speaks ' +
-        'in short bursts with the breath held between them. Tight jaw. Under pressure ' +
-        'the pace quickens and the pitch climbs, and he swallows the ends of words.',
+        'British. Sandhurst-and-the-Somme English, officer class, clipped and forward-placed — ' +
+        'a man of thirty-eight. Short bursts with the breath held between them, tight jaw. ' +
+        'Under pressure the pace quickens, the pitch climbs, and he swallows the ends of words.',
       knowledge: {
         knows: [
           'He quarrelled with Sir Edmund at ten o’clock — he had asked for a loan and been refused with contempt.',
@@ -158,10 +158,11 @@ export const blackwoodHall: CasePack = {
         'Never confesses. Never admits to being on the landing.',
       voice: 'coral',
       voiceDirection:
-        'A woman of thirty-two. Educated, warm on the surface, northern vowels almost ' +
-        'entirely trained out — they surface only when she is startled. Unhurried and ' +
-        'exact, like someone reading back a ledger. Never louder, never faster; the ' +
-        'more serious the question, the quieter and more courteous she becomes.',
+        'British, north of England underneath — a woman of thirty-two whose Yorkshire vowels ' +
+        'have been almost entirely trained out and surface only when she is startled. ' +
+        'Educated, warm on the surface, unhurried and exact, like someone reading back a ' +
+        'ledger. Never louder, never faster; the graver the question, the quieter and more ' +
+        'courteous she becomes.',
       knowledge: {
         knows: [
           'She keeps the ledgers and drafted most of Sir Edmund’s correspondence.',
@@ -222,10 +223,10 @@ export const blackwoodHall: CasePack = {
         'like a dragon on gold, which makes him look guiltier than he is.',
       voice: 'ballad',
       voiceDirection:
-        'A man of sixty-four, plummy and port-warmed, a good deal of chest in it. ' +
-        'Rolls into his sentences and chuckles halfway through his own. Rambles ' +
-        'affably, doubles back, loses the thread when it suits him. Genuinely fond ' +
-        'of everyone, which is how he avoids answering anything.',
+        'British, old-school Harley Street — a man of sixty-four, plummy and port-warmed, a ' +
+        'good deal of chest in it. Rolls into his sentences and chuckles halfway through his ' +
+        'own. Rambles affably, doubles back, loses the thread when it suits him. Genuinely ' +
+        'fond of everyone, which is how he avoids answering anything.',
       knowledge: {
         knows: [
           'He examined the body: death from the fall, around midnight; no trace of poison or violence beyond it.',
@@ -281,10 +282,10 @@ export const blackwoodHall: CasePack = {
         'Delivers devastating facts in a tone suitable for announcing dinner.',
       voice: 'fable',
       voiceDirection:
-        'A man of fifty-eight, thirty years in service. Formal English, entirely level, ' +
-        'unhurried, each sentence closed and set down. Announces a bloodstain in exactly ' +
-        'the tone he would use for announcing dinner. No emphasis, no colour, no ' +
-        'hesitation — the flatness is the performance.',
+        'British to the bone — the English butler, fifty-eight, thirty years in service. ' +
+        'Formal, entirely level, unhurried, each sentence closed and set down. Announces a ' +
+        'bloodstain in exactly the tone he would use for announcing dinner. No emphasis, no ' +
+        'colour, no hesitation — the flatness is the performance.',
       knowledge: {
         knows: [
           'He locked and bolted every outside door at eleven; all were still bolted when the alarm was raised. No one entered or left the Hall.',
@@ -337,10 +338,10 @@ export const blackwoodHall: CasePack = {
   prologue: {
     voice: 'onyx',
     voiceDirection:
-      'A man of about seventy. A deep, resonant bass-baritone with real weight at the bottom ' +
-      'of it. Aristocratic English, immaculate diction, every consonant finished. Slow and ' +
-      'utterly unhurried, with long pauses between sentences and a faint, controlled relish ' +
-      'in the darker words. Never loud. The calm is what makes it frightening.',
+      'British, and unmistakably so — an aristocratic English bass-baritone of about seventy, ' +
+      'deep and resonant with real weight at the bottom of it. Immaculate diction, every ' +
+      'consonant finished. Slow and utterly unhurried, long pauses between sentences, and a ' +
+      'faint controlled relish in the darker words. Never loud. The calm is what frightens.',
     beats: [
       {
         sceneAsset: '/art/deco-1920s/scene/moor-road.jpg',

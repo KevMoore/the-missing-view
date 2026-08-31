@@ -69,10 +69,16 @@ test('a full game of Death at Blackwood Hall', async ({ browser }) => {
   await dev.getByRole('button', { name: 'Challenge' }).click();
   await expect(screen.getByText('backed by 1 · challenged by 1')).toBeVisible();
 
+  // The clock is advisory, so the console has to say whose move it is once it
+  // runs out, and show the vote filling up once it is open.
+  await expect(facilitator.getByText(/Acts are suggestions/)).toBeVisible();
+
   // --- three commitments drive the acts (D5) ---
   for (let act = 1; act <= 3; act++) {
     await facilitator.getByRole('button', { name: /Close the act/ }).click();
     await expect(screen.getByText('The house must decide')).toBeVisible();
+    // The facilitator can see the vote arriving, as a count and never as names.
+    await expect(facilitator.getByText(/of 5 have voted/)).toBeVisible();
     // Eve votes on her phone.
     const eve = phones[4]!;
     await eve.getByRole('button', { name: 'decide' }).click();

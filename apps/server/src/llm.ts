@@ -20,6 +20,19 @@ const MODEL = 'gpt-5.6-luna';
 const SPEECH_MODEL = 'gpt-4o-mini-tts';
 
 /**
+ * Stated first and stated hard, for every spoken line in the game.
+ *
+ * The model reads in American English unless told plainly not to, and a
+ * character direction like "clipped soldier's answers" is a manner, not an
+ * accent — it will happily be delivered by a Californian. In a 1926 English
+ * country house one American vowel undoes the whole room.
+ */
+const BRITISH =
+  'Speak in British English throughout, with a British accent. This is not optional and ' +
+  'overrides any default. Never American, Canadian or transatlantic. British vowels, British ' +
+  'rhythm, British stress. Non-rhotic: do not sound the R at the end of a word.';
+
+/**
  * A suspect's reply is two sentences of in-character dialogue and the whole
  * room is waiting on it, so reasoning effort buys nothing and costs seconds.
  * The reveal gets one step up: it has to phrase real counters warmly.
@@ -156,6 +169,7 @@ export async function speakAnswer(
         input: text,
         // voiceDirection is how they sound; persona is how they phrase things.
         instructions: [
+          BRITISH,
           `You are ${suspect.name}, questioned in an English country house in 1926.`,
           suspect.voiceDirection,
           suspect.persona,
@@ -185,6 +199,7 @@ export async function narrate(pack: CasePack, text: string): Promise<Buffer | nu
         voice: prologue.voice,
         input: text,
         instructions: [
+          BRITISH,
           'You are narrating the opening of a 1926 English country-house murder mystery.',
           prologue.voiceDirection,
           'Speak the line only. Do not announce yourself or add words.',

@@ -905,3 +905,11 @@ a:hover {
   font-size: 1.02rem;
   color: var(--cream);
 }
+
+/* Something the facilitator must act on, rather than something to read. */
+.cue {
+  border-left: 3px solid var(--gold);
+  padding: 0.5rem 0.8rem;
+  background: rgba(201, 163, 92, 0.08);
+  line-height: 1.6;
+}

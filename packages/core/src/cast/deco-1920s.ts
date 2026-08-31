@@ -222,7 +222,7 @@ export const DECO_1920S_SUSPECTS: SuspectShell[] = [
       'Mishears anything inconvenient. Insults people by name without heat, as a matter of record.',
     voice: 'shimmer',
     voiceDirection:
-      'A woman of seventy-eight. Aristocratic English, thin and dry and pitched slightly too loud, ' +
+      'British, aristocratic English of the old school — a woman of seventy-eight, thin and dry ' +
       'the way the deaf speak. Slow, absolutely certain, no warmth at all. Trails off mid-sentence ' +
       'when she loses interest, which is often.',
   },
@@ -237,7 +237,7 @@ export const DECO_1920S_SUSPECTS: SuspectShell[] = [
       'the land and contemptuous of the house. What he does say is exact and never volunteered twice.',
     voice: 'ash',
     voiceDirection:
-      'A man of fifty. Rural West Country, low and gravelled, unhurried to the point of stubbornness. ' +
+      'British, deep rural West Country — a man of fifty, low and gravelled, unhurried to the point of stubbornness. ' +
       'Long pauses before he speaks at all. Never raises his voice and never softens it.',
   },
   {
@@ -250,7 +250,7 @@ export const DECO_1920S_SUSPECTS: SuspectShell[] = [
       'suspicion as a personal insult and debt as someone else’s failure of manners.',
     voice: 'ballad',
     voiceDirection:
-      'A man of twenty-four, expensively educated, and three glasses past careful. Loud, loose, ' +
+      'British, expensive public school — a man of twenty-four, three glasses past careful. Loud, loose, ' +
       'consonants going soft. Swings between a sneer and self-pity inside one sentence, and the ' +
       'pitch rises whenever he is caught out.',
   },
@@ -264,7 +264,7 @@ export const DECO_1920S_SUSPECTS: SuspectShell[] = [
       'wronged it. Buries the one useful fact in the middle of a grievance about the fish.',
     voice: 'coral',
     voiceDirection:
-      'A woman of fifty-five, Irish, warm and very fast, sentences running into one another with no ' +
+      'Irish, from Cork — a woman of fifty-five, warm and very fast, sentences running into one another with no ' +
       'gap to interrupt. Rises in pitch when defensive, which is most of the time. Bustling, ' +
       'breathless, and entirely without malice.',
   },
@@ -279,7 +279,7 @@ export const DECO_1920S_SUSPECTS: SuspectShell[] = [
       'of everything and is probably guilt about something small.',
     voice: 'echo',
     voiceDirection:
-      'A man of thirty-three. Educated, reedy, pitched a little high and a little fast. Swallows, ' +
+      'British, home counties — a man of thirty-three, educated, reedy, pitched a little high and a little fast. Swallows, ' +
       'restarts sentences, adds qualifications. Audibly relieved by an easy question and audibly ' +
       'undone by a hard one.',
   },
@@ -294,7 +294,7 @@ export const DECO_1920S_SUSPECTS: SuspectShell[] = [
       'says on purpose.',
     voice: 'nova',
     voiceDirection:
-      'A woman of forty-four. Well-bred English, musical and a shade too rehearsed. Catches in the ' +
+      'British, well-bred English — a woman of forty-four, musical and a shade too rehearsed. Catches in the ' +
       'throat on cue. Between the catches the voice goes suddenly flat and businesslike, and that ' +
       'is the real one.',
   },
@@ -308,7 +308,7 @@ export const DECO_1920S_SUSPECTS: SuspectShell[] = [
       'professional discretion, and is quietly delighted to be the only person who understands the will.',
     voice: 'alloy',
     voiceDirection:
-      'A man of thirty-nine. Careful lower-middle-class English with the corners filed off. Precise, ' +
+      'British, careful lower-middle-class English with the corners filed off — a man of thirty-nine. Precise, ' +
       'level, faintly nasal, every clause closed. Pauses before figures and dates, as if reading them ' +
       'off a page.',
   },
@@ -322,7 +322,9 @@ export const DECO_1920S_SUSPECTS: SuspectShell[] = [
       'St Petersburg, and answers nothing. Grows very still and very direct only when genuinely cornered.',
     voice: 'onyx',
     voiceDirection:
-      'A man of fifty-eight. Russian-accented English, deep, slow and beautifully articulated, ' +
+      'A Russian émigré of fifty-eight who has spoken English in London since 1919: an ' +
+      'acquired, almost over-correct English drawl with the Russian now only a shadow under ' +
+      'it. Deep, slow and beautifully articulated, ' +
       'savouring the words. Warm and amused throughout. When cornered the warmth vanishes and the ' +
       'sentences become short.',
   },

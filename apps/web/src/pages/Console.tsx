@@ -97,7 +97,10 @@ export function Console() {
           </div>
         </div>
         {view?.actStartedAt !== undefined && (
-          <div className="timer" style={{ fontSize: '2rem' }}>
+          <div
+            className={`timer ${overrunning(view, now) ? 'late' : ''}`}
+            style={{ fontSize: '2rem' }}
+          >
             {remaining(view.actStartedAt, view.actMinutes, now)}
           </div>
         )}
@@ -278,6 +281,20 @@ export function Console() {
             <span className="muted small">The reveal is on the big screen.</span>
           )}
         </div>
+        {phase === 'act' && overrunning(view, now) && (
+          <p className="small mt cue">
+            The clock has run out. Nothing happens on its own — close the act when the room is
+            ready, which may not be yet.
+          </p>
+        )}
+        {phase === 'commitment' && view?.votesIn && (
+          <p className="small mt cue">
+            {view.votesIn.voted} of {view.votesIn.of} have voted.{' '}
+            {view.votesIn.voted < view.votesIn.of
+              ? 'Give the rest a moment, then move on — a missing vote is a finding, not a fault.'
+              : 'Everyone is in.'}
+          </p>
+        )}
         <p className="muted small mt">
           Acts are suggestions, not shackles — close an act when the room is ready, not when the
           clock says so.
@@ -359,4 +376,10 @@ export function Console() {
       {error && <div className="toast">{error}</div>}
     </div>
   );
+}
+
+/** The clock is advisory (D5), but the console still has to say whose move it is. */
+function overrunning(view: ConsoleView | null, now: number): boolean {
+  if (!view?.actStartedAt) return false;
+  return now > view.actStartedAt + view.actMinutes * 60_000;
 }

@@ -48,7 +48,7 @@ const HOUSE_STYLE = [
   'Period detail must be concrete and correct. No anachronisms.',
   'Prose is spare and physical. A clue is an object, a record, or something a named person saw.',
   'Never write "clearly", "obviously", or "it seems". State what is there.',
-  'British English.',
+  'British English throughout — spelling, idiom and turn of phrase.',
 ].join(' ');
 
 export async function draftCase(opts: DraftOptions): Promise<DraftResult> {
@@ -69,6 +69,9 @@ export async function draftCase(opts: DraftOptions): Promise<DraftResult> {
       'voiceDirection describes how they SOUND — sex, rough age, accent and class, pace, pitch, delivery.',
       'persona describes how they PHRASE things. They are different fields; do not repeat one in the other.',
       'Spread the voices: do not write five polite middle-aged people.',
+      'Every voiceDirection must OPEN by naming the accent explicitly — the speech model reads ' +
+        'American English unless told otherwise, and a manner is not an accent. Use accents of ' +
+        'these islands unless the brief plainly calls for otherwise.',
       'Assign each suspect a different voice id from: alloy, ash, ballad, coral, echo, fable, onyx, nova, sage, shimmer.',
     ].join('\n'),
   })) as unknown as CastDraft;

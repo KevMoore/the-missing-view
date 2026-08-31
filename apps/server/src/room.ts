@@ -423,6 +423,14 @@ export class Room {
       boardCount: s?.board.length ?? 0,
       questionCount: s?.questions.length ?? 0,
       accusationMade: Boolean(s?.accusation),
+      ...(s?.phase === 'commitment'
+        ? {
+            votesIn: {
+              voted: Object.keys(s.commitments.at(-1)?.votes ?? {}).length,
+              of: s.players.length,
+            },
+          }
+        : {}),
       screenConnected: [...this.clients].some((c) => c.role === 'screen'),
       prologuePlaying: this.prologuePlaying,
       hasPrologue: Boolean(this.pack.prologue?.beats.length),

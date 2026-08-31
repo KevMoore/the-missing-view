@@ -109,3 +109,29 @@ describe('perspectives at the table', () => {
     }
   });
 });
+
+describe('the voices are of these islands', () => {
+  // The speech model reads American English unless told plainly otherwise, and
+  // one American vowel undoes a 1926 English country house. A manner — "clipped
+  // soldier's answers" — is not an accent, so each direction has to say it.
+  const PLACES =
+    /British|English|Irish|Scottish|Welsh|Received Pronunciation|West Country|Yorkshire|home counties|London|Cork/i;
+
+  it('names a place in every suspect shell direction', () => {
+    for (const s of DECO_1920S_SUSPECTS) expect(s.voiceDirection ?? '', s.name).toMatch(PLACES);
+  });
+
+  it('names a place in every direction in the case', () => {
+    for (const s of blackwoodHall.suspects) expect(s.voiceDirection ?? '', s.name).toMatch(PLACES);
+    expect(blackwoodHall.prologue?.voiceDirection ?? '', 'the narrator').toMatch(PLACES);
+  });
+
+  it('never lets a direction read as American', () => {
+    const all = [
+      ...DECO_1920S_SUSPECTS.map((s) => s.voiceDirection ?? ''),
+      ...blackwoodHall.suspects.map((s) => s.voiceDirection ?? ''),
+      blackwoodHall.prologue?.voiceDirection ?? '',
+    ];
+    for (const d of all) expect(d).not.toMatch(/American|transatlantic|mid-?Atlantic/i);
+  });
+});

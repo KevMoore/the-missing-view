@@ -128,6 +128,11 @@ export interface ConsoleView {
   boardCount: number;
   questionCount: number;
   accusationMade: boolean;
+  /**
+   * How the open commitment is filling up. A count, never who voted for what:
+   * the facilitator is closing an act, not auditing the room (D11).
+   */
+  votesIn?: { voted: number; of: number };
   /** The art, the music and the QR code all live on /screen; the console nags until it is open. */
   screenConnected: boolean;
   /** True while the opening sequence is on the big screen. */
