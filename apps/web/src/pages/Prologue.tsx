@@ -133,7 +133,9 @@ export function Prologue({
           b.sceneAsset === undefined ? null : (
             <div
               key={b.sceneAsset + String(i)}
-              className={`prologue-plate${i === index ? ' on' : ''}`}
+              // `played` is sticky — it carries the push, and removing it mid-fade
+              // is what made the transition jump. `on` carries only the opacity.
+              className={`prologue-plate${i <= index ? ' played' : ''}${i === index ? ' on' : ''}`}
               style={{ backgroundImage: `url(${b.sceneAsset})` }}
               aria-hidden
             />

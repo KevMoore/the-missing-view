@@ -721,18 +721,37 @@ a:hover {
   opacity: 0;
   transform: scale(1);
   transition: opacity 1800ms ease-in-out;
+  will-change: opacity;
+  backface-visibility: hidden;
 }
-/* The slow push. Long enough that you feel it rather than see it. */
+
+/*
+ * The fade and the push are on different classes on purpose.
+ *
+ * They were both on `.on`, so the moment a plate stopped being the current one
+ * its animation was removed with the class and the transform snapped from
+ * scale(1.09) straight back to scale(1) — while the plate was still fully
+ * visible and only beginning to fade. The cross-dissolve was landing on top of
+ * a jump-cut.
+ *
+ * `.played` is added when a plate first appears and never taken away, so the
+ * push holds its ground for the whole of the fade out. `.on` now does nothing
+ * but opacity.
+ */
+.prologue-plate.played {
+  animation: prologue-push 26s linear forwards;
+}
 .prologue-plate.on {
   opacity: 1;
-  animation: prologue-push 14s ease-out forwards;
 }
+/* Linear, and longer than any beat: an eased push arrives and then sits still,
+   which reads as the picture freezing halfway through a sentence. */
 @keyframes prologue-push {
   from {
-    transform: scale(1) translate3d(0, 0, 0);
+    transform: scale(1.01) translate3d(0, 0, 0);
   }
   to {
-    transform: scale(1.09) translate3d(-1.2%, -0.8%, 0);
+    transform: scale(1.13) translate3d(-1.6%, -1.1%, 0);
   }
 }
 .prologue-vignette {
@@ -781,7 +800,7 @@ a:hover {
   background: var(--gold);
 }
 @media (prefers-reduced-motion: reduce) {
-  .prologue-plate.on {
+  .prologue-plate.played {
     animation: none;
   }
   .prologue-line {
