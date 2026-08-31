@@ -96,10 +96,12 @@ const server = createServer((req, res) => {
 
     // A suspect's reply, spoken. Held in memory by the room that made it, so it
     // dies with the game and never reaches disk.
-    const voice = /^\/voice\/([0-9A-F]{6})\/([\w-]+)\.mp3$/.exec(req.url ?? '');
+    // The key may carry a house segment (`h1/ask-q-3`); narration, which the
+    // whole room shares, has none. A Map lookup, not a file path.
+    const voice = /^\/voice\/([0-9A-F]{6})\/((?:[\w-]+\/)?[\w-]+)\.mp3$/.exec(req.url ?? '');
     if (voice) {
-      const [, roomCode = '', questionId = ''] = voice;
-      const audio = rooms.get(roomCode)?.voice(questionId);
+      const [, roomCode = '', key = ''] = voice;
+      const audio = rooms.get(roomCode)?.voice(key);
       if (!audio) {
         res.writeHead(404);
         res.end();

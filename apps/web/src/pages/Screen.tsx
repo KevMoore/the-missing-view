@@ -1,5 +1,5 @@
 /** The big screen: join code, evidence board, suspect stage, timer, reveal. */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import { remaining, useGameSocket, type ScreenView, type ServerMessage } from '../ws.js';
 import { useMusic, type MusicCue } from '../music.js';
@@ -114,7 +114,15 @@ export function Screen() {
   const [now, setNow] = useState(Date.now());
   const [muted, setMuted] = useState(() => sessionStorage.getItem('tmv-muted') === '1');
   const short = useShortScreen();
-  const cast = useMemo(() => new Map((view?.players ?? []).map((p) => [p.id, p])), [view?.players]);
+  /**
+   * Every house's cast in one map. Two houses never share a character, so one
+   * id always means one face however many houses are playing.
+   */
+  const houses = useMemo(() => view?.houses ?? [], [view?.houses]);
+  const cast = useMemo(
+    () => new Map(houses.flatMap((h) => h.players).map((p) => [p.id, p])),
+    [houses],
+  );
   // One full card, always: with a painting on it, two will not fit anywhere.
   const caps = short
     ? { questions: 2, theories: 3, boardFull: 1, boardSlim: 3 }
@@ -158,19 +166,26 @@ export function Screen() {
     if (previous !== null && previous !== view.act) setBreakFor(view.act);
   }, [view?.act, view?.phase]);
 
+  // Keyed by house as well as by id: both houses hold the same case, so the
+  // same clue tabled at both tables is two arrivals, not one.
   const boardSignatures = useMemo(
-    () => Object.fromEntries((view?.board ?? []).map((c) => [c.clueId, c.clueId])),
-    [view?.board],
+    () =>
+      Object.fromEntries(
+        houses.flatMap((h) => h.board.map((c) => [`${h.id}:${c.clueId}`, c.clueId])),
+      ),
+    [houses],
   );
   const theorySignatures = useMemo(
     () =>
       Object.fromEntries(
-        (view?.theories ?? []).map((t) => [
-          t.id,
-          `${String(t.backers.length)}/${String(t.challengers.length)}`,
-        ]),
+        houses.flatMap((h) =>
+          h.theories.map((t) => [
+            `${h.id}:${t.id}`,
+            `${String(t.backers.length)}/${String(t.challengers.length)}`,
+          ]),
+        ),
       ),
-    [view?.theories],
+    [houses],
   );
   const board = useArrivals(boardSignatures, view !== null);
   const theories = useArrivals(theorySignatures, view !== null);
@@ -324,6 +339,30 @@ export function Screen() {
         </div>
       </header>
 
+      {view.comparison && (
+        <div className="deco-frame mb fade-up">
+          <div className="deco-rule">How the two houses did</div>
+          <div className="compare">
+            {view.comparison.map((h) => (
+              <div className={`compare-house${h.solved ? ' won' : ''}`} key={h.id}>
+                <div className="compare-name">{h.name}</div>
+                <div className="compare-verdict">{h.solved ? 'Solved it' : 'Got it wrong'}</div>
+                <div className="muted small">
+                  {h.minutes} min · {h.cluesTabled} clues · {h.theoriesProposed} theories ·{' '}
+                  {h.questionsAsked} questions
+                </div>
+              </div>
+            ))}
+          </div>
+          {/* Said plainly, because the competition is the hook and the point is
+              the debrief: two teams given the same case rarely fail the same way. */}
+          <p className="center muted small mt">
+            The interesting question is not which house won. It is what each of them did differently
+            with the same evidence.
+          </p>
+        </div>
+      )}
+
       {view.phase === 'commitment' && view.commitmentPrompt && (
         <div className="deco-frame mb fade-up">
           <div className="deco-rule">The house must decide</div>
@@ -334,7 +373,8 @@ export function Screen() {
         </div>
       )}
 
-      {view.accusation && (
+      {/* With two houses each one announces its own, on its own column. */}
+      {view.accusation && houses.length === 1 && (
         <div className="deco-frame mb fade-up">
           <div className="deco-rule">The accusation</div>
           <h2 className="center" style={{ fontSize: '1.8rem' }}>
@@ -344,7 +384,11 @@ export function Screen() {
         </div>
       )}
 
-      <div className="act-columns">
+      {/* One house reads as three columns; two houses share the suspects and
+          the interrogation, then run their boards side by side. Neither house
+          can see what the other has tabled, so there is nothing to hide here —
+          the split is only so each team can find its own work. */}
+      <div className={houses.length > 1 ? 'house-columns' : 'act-columns'}>
         <section>
           <div className="deco-rule">The suspects</div>
           <div className="suspect-grid mb">
@@ -373,7 +417,10 @@ export function Screen() {
           {latest(view.questions, caps.questions).map((q) => (
             <div className="qa fade-up" key={q.id}>
               <div className="q">
-                <Who player={cast.get(q.by)} /> asks {q.suspectName}: “{q.text}”
+                <Who player={cast.get(q.by)} />
+                {q.houseName !== undefined && (
+                  <span className="house-tag">{q.houseName}</span>
+                )} asks {q.suspectName}: “{q.text}”
               </div>
               {q.answer ? (
                 <div className="a">“{q.answer}”</div>
@@ -385,80 +432,41 @@ export function Screen() {
           <Earlier total={view.questions.length} shown={caps.questions} noun="question" />
         </section>
 
-        <section>
-          <div className="deco-rule">Theories</div>
-          {view.theories.length === 0 && (
-            <p className="muted small">No theory yet. What do you think happened?</p>
-          )}
-          {view.theories.length > 0 && (
-            <>
-              {latest(view.theories, caps.theories).map((t) => (
-                <div
-                  className={`card fade-up${theories.arrived.has(t.id) ? ' just-in' : ''}${
-                    theories.changed.has(t.id) && !theories.arrived.has(t.id) ? ' just-moved' : ''
-                  }`}
-                  key={t.id}
-                >
-                  <p>“{t.text}”</p>
-                  <div className="byline">
-                    <Who player={cast.get(t.by)} prefix="— " trailing />
-                  </div>
-                  <div className="byline">
-                    backed by {t.backers.length} · challenged by {t.challengers.length}
-                  </div>
+        {houses.length > 1 ? (
+          <div className="houses">
+            {houses.map((h) => (
+              <section className="house" key={h.id}>
+                <div className="house-head">
+                  <span className="house-title">{h.name}</span>
+                  {h.committed && (
+                    <span className="house-progress">
+                      {h.committed.count}/{h.committed.of} named
+                    </span>
+                  )}
                 </div>
-              ))}
-              <Earlier
-                total={view.theories.length}
-                shown={caps.theories}
-                noun="theory"
-                plural="theories"
-              />
-            </>
-          )}
-        </section>
-
-        <section>
-          <div className="deco-rule">The evidence board</div>
-          {view.board.length === 0 && (
-            <p className="muted small">Nothing tabled yet. What are you all holding?</p>
-          )}
-          {/* The two newest read in full; the rest stay on the board as titles, so the
-              team's shared record is never lost to make room for the newest thing. */}
-          <div className="board-list">
-            {latest(view.board, caps.boardFull).map((c) => (
-              <div
-                className={`card evidence fade-up${board.arrived.has(c.clueId) ? ' just-in' : ''}`}
-                key={c.clueId}
-              >
-                {c.imageAsset !== undefined && (
-                  <img className="evidence-plate" src={c.imageAsset} alt="" aria-hidden />
+                {h.accusation && (
+                  <div className="card accused fade-up">
+                    <h3>The house accuses {h.accusation.culpritName}</h3>
+                    <p>“{h.accusation.motive}”</p>
+                  </div>
                 )}
-                <h3>{c.title}</h3>
-                <p>{c.text}</p>
-                <div className="byline">
-                  <Who player={cast.get(c.by)} prefix="tabled by " trailing />
-                </div>
-              </div>
+                <TheoryColumn house={h} cast={cast} caps={caps} arrivals={theories} />
+                <BoardColumn house={h} cast={cast} caps={caps} arrivals={board} />
+              </section>
             ))}
-            {latest(view.board.slice(0, -caps.boardFull), caps.boardSlim).map((c) => (
-              <div
-                className={`card-slim${board.arrived.has(c.clueId) ? ' just-in' : ''}`}
-                key={c.clueId}
-              >
-                <span className="grow">{c.title}</span>
-                <span className="byline">
-                  <Who player={cast.get(c.by)} trailing />
-                </span>
-              </div>
-            ))}
-            <Earlier
-              total={view.board.length}
-              shown={caps.boardFull + caps.boardSlim}
-              noun="clue"
-            />
           </div>
-        </section>
+        ) : (
+          houses.map((h) => (
+            <Fragment key={h.id}>
+              <section>
+                <TheoryColumn house={h} cast={cast} caps={caps} arrivals={theories} />
+              </section>
+              <section>
+                <BoardColumn house={h} cast={cast} caps={caps} arrivals={board} />
+              </section>
+            </Fragment>
+          ))
+        )}
       </div>
     </div>
   );
@@ -467,6 +475,92 @@ export function Screen() {
     <>
       {chrome}
       {body}
+    </>
+  );
+}
+
+interface ColumnProps {
+  house: NonNullable<ScreenView['houses']>[number];
+  cast: Map<string, ScreenView['players'][number]>;
+  caps: { questions: number; theories: number; boardFull: number; boardSlim: number };
+  arrivals: { changed: ReadonlySet<string>; arrived: ReadonlySet<string> };
+}
+
+/** One house's theories. Arrival keys carry the house id: see boardSignatures. */
+function TheoryColumn({ house, cast, caps, arrivals }: ColumnProps) {
+  const key = (id: string) => `${house.id}:${id}`;
+  return (
+    <>
+      <div className="deco-rule">Theories</div>
+      {house.theories.length === 0 && (
+        <p className="muted small">No theory yet. What do you think happened?</p>
+      )}
+      {latest(house.theories, caps.theories).map((t) => (
+        <div
+          className={`card fade-up${arrivals.arrived.has(key(t.id)) ? ' just-in' : ''}${
+            arrivals.changed.has(key(t.id)) && !arrivals.arrived.has(key(t.id)) ? ' just-moved' : ''
+          }`}
+          key={t.id}
+        >
+          <p>“{t.text}”</p>
+          <div className="byline">
+            <Who player={cast.get(t.by)} prefix="— " trailing />
+          </div>
+          <div className="byline">
+            backed by {t.backers.length} · challenged by {t.challengers.length}
+          </div>
+        </div>
+      ))}
+      <Earlier
+        total={house.theories.length}
+        shown={caps.theories}
+        noun="theory"
+        plural="theories"
+      />
+    </>
+  );
+}
+
+/** One house's evidence board. */
+function BoardColumn({ house, cast, caps, arrivals }: ColumnProps) {
+  const key = (id: string) => `${house.id}:${id}`;
+  return (
+    <>
+      <div className="deco-rule">The evidence board</div>
+      {house.board.length === 0 && (
+        <p className="muted small">Nothing tabled yet. What are you all holding?</p>
+      )}
+      {/* The newest reads in full; the rest stay on the board as titles, so the
+          team's shared record is never lost to make room for the newest thing. */}
+      <div className="board-list">
+        {latest(house.board, caps.boardFull).map((c) => (
+          <div
+            className={`card evidence fade-up${arrivals.arrived.has(key(c.clueId)) ? ' just-in' : ''}`}
+            key={c.clueId}
+          >
+            {c.imageAsset !== undefined && (
+              <img className="evidence-plate" src={c.imageAsset} alt="" aria-hidden />
+            )}
+            <h3>{c.title}</h3>
+            <p>{c.text}</p>
+            <div className="byline">
+              <Who player={cast.get(c.by)} prefix="tabled by " trailing />
+            </div>
+          </div>
+        ))}
+        {latest(house.board.slice(0, -caps.boardFull), caps.boardSlim).map((c) => (
+          <div
+            className={`card-slim${arrivals.arrived.has(key(c.clueId)) ? ' just-in' : ''}`}
+            key={c.clueId}
+          >
+            <span className="grow">{c.title}</span>
+            <span className="byline">
+              <Who player={cast.get(c.by)} trailing />
+            </span>
+          </div>
+        ))}
+        <Earlier total={house.board.length} shown={caps.boardFull + caps.boardSlim} noun="clue" />
+      </div>
     </>
   );
 }

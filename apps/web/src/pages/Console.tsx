@@ -399,35 +399,69 @@ export function Console() {
         </p>
       </div>
 
-      <div className="deco-frame mb">
-        <div className="deco-rule">The room</div>
-        {(view?.players ?? []).map((p) => (
-          <div
-            className="row"
-            key={p.id}
-            style={{ padding: '0.35rem 0', borderBottom: '1px solid var(--panel-edge)' }}
-          >
-            <span className="grow">
-              {p.bot ? '🤖' : p.connected ? '🟢' : '⚪️'} {p.name}
-              {p.characterName !== undefined && (
-                <span className="muted small"> · {p.characterName}</span>
-              )}
-              {p.bot && <span className="muted small"> · AI</span>}
-            </span>
-            {view?.mode === 'two-houses' && (
-              <span className="muted small">
-                {view.houses.find((h) => h.id === p.houseId)?.name ?? '—'}
+      {/* Not in the lobby: the casting table above is the roster there, and
+          showing every name twice on one page made the setup harder to read
+          rather than easier. This panel is the in-play monitor. */}
+      {phase !== 'lobby' && (
+        <div className="deco-frame mb">
+          <div className="deco-rule">The room</div>
+          {(view?.players ?? []).map((p) => (
+            <div
+              className="row"
+              key={p.id}
+              style={{ padding: '0.35rem 0', borderBottom: '1px solid var(--panel-edge)' }}
+            >
+              <span className="grow">
+                {p.bot ? '🤖' : p.connected ? '🟢' : '⚪️'} {p.name}
+                {p.characterName !== undefined && (
+                  <span className="muted small"> · {p.characterName}</span>
+                )}
+                {p.bot && <span className="muted small"> · AI</span>}
               </span>
-            )}
-            <span className="muted small">{String(p.moveCount)} moves</span>
+              {view?.mode === 'two-houses' && (
+                <span className="muted small">
+                  {view.houses.find((h) => h.id === p.houseId)?.name ?? '—'}
+                </span>
+              )}
+              <span className="muted small">{String(p.moveCount)} moves</span>
+            </div>
+          ))}
+          <p className="muted small mt">
+            {String(view?.boardCount ?? 0)} clues tabled · {String(view?.questionCount ?? 0)}{' '}
+            questions asked
+            {view?.accusationMade ? ' · accusation made' : ''}
+          </p>
+        </div>
+      )}
+
+      {view?.comparison && (
+        <div className="deco-frame mb fade-up">
+          <div className="deco-rule">Head to head</div>
+          <div className="split">
+            {view.comparison.map((h) => (
+              <Stat
+                key={h.id}
+                label={h.name}
+                value={h.solved ? 'Solved' : (h.culpritId ?? 'no accusation')}
+              />
+            ))}
           </div>
-        ))}
-        <p className="muted small mt">
-          {String(view?.boardCount ?? 0)} clues tabled · {String(view?.questionCount ?? 0)}{' '}
-          questions asked
-          {view?.accusationMade ? ' · accusation made' : ''}
-        </p>
-      </div>
+          <p className="muted small mt" style={{ lineHeight: 1.6 }}>
+            Two teams, the same case, the same suspects, different hands. What is worth talking
+            about is not who won — it is what each of them did differently with the same evidence,
+            and which of the two behaviours below they recognise in themselves.
+          </p>
+          {view.comparison.map((h) => (
+            <p className="small" key={h.id}>
+              <strong>{h.name}</strong>{' '}
+              <span className="muted">
+                {h.minutes} min · {h.cluesTabled} clues tabled · {h.theoriesProposed} theories ·{' '}
+                {h.questionsAsked} questions
+              </span>
+            </p>
+          ))}
+        </div>
+      )}
 
       {view?.teamReveal && (
         <div className="deco-frame fade-up">
@@ -606,7 +640,9 @@ function Casting({
               setCasting(casting === p.id ? null : p.id);
             }}
           >
-            <strong>{p.name}</strong>
+            <strong>
+              <span aria-hidden>{p.bot ? '🤖' : p.connected ? '🟢' : '⚪️'}</span> {p.name}
+            </strong>
             <span className="muted small">{p.characterName ?? 'not cast'}</span>
             {view.mode === 'two-houses' && (
               <span className="seat-house">

@@ -65,6 +65,7 @@ export function Phone() {
           You’re in.
         </h1>
         <div className="deco-rule">Room {view.roomCode}</div>
+        {view.houseName !== undefined && <p className="house-chip">{view.houseName}</p>}
         <p className="muted mt">Watch the big screen. The house will assemble shortly.</p>
       </div>
     );
@@ -74,6 +75,10 @@ export function Phone() {
 
   return (
     <div className="phone-stage">
+      {/* Which house you are in, when there are two. It has to be on every
+          screen, not just the lobby: a player who forgets is a player about to
+          shout something across the room at the other team. */}
+      {view.houseName !== undefined && <div className="house-chip">{view.houseName}</div>}
       <div className="tabs">
         {(['dossier', 'suspects', 'theories', 'decide'] as Tab[]).map((t) => (
           <button

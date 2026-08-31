@@ -185,12 +185,24 @@ test('accusation flow in act 3', async ({ browser }) => {
     await facilitator.getByRole('button', { name: /Close the act/ }).click();
     await facilitator.getByRole('button', { name: /Begin Act/ }).click();
   }
+  // It takes all four. One player naming somebody is not the house accusing
+  // (D36) — the game is about a team deciding, and it used to be a race.
   const ana = phones[0]!;
   await ana.getByRole('button', { name: 'decide' }).click();
-  await expect(ana.getByText('Name the killer')).toBeVisible();
+  await expect(ana.getByText('The house accuses', { exact: true })).toBeVisible();
   await ana.getByLabel('The killer').selectOption({ label: 'Miss Evelyn Cross' });
   await ana.getByLabel('The motive').fill('Revenge for her father');
-  await ana.getByRole('button', { name: 'Make the accusation' }).click();
+  await ana.getByRole('button', { name: 'I say it was them' }).click();
+  await expect(ana.getByRole('button', { name: 'Take my name off it' })).toBeVisible();
+  // Three of four is still not an accusation.
+  await expect(ana.getByText('The house has accused')).toBeHidden();
+
+  for (const phone of phones.slice(1)) {
+    await phone.getByRole('button', { name: 'decide' }).click();
+    await phone.getByLabel('The killer').selectOption({ label: 'Miss Evelyn Cross' });
+    await phone.getByRole('button', { name: 'I say it was them' }).click();
+  }
+  await expect(ana.getByText('The house has accused')).toBeVisible({ timeout: 10_000 });
 
   await facilitator.getByRole('button', { name: /Close the act/ }).click();
   await facilitator.getByRole('button', { name: /End the game — reveal/ }).click();

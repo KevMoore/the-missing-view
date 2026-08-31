@@ -24,7 +24,7 @@ test('a busy interrogation plays each exchange through before the next', async (
     await route.continue();
   });
   screen.on('response', (r) => {
-    const m = /\/voice\/[0-9A-F]{6}\/(ask-)?([\w-]+)\.mp3/.exec(r.url());
+    const m = /\/voice\/[0-9A-F]{6}\/(?:[\w-]+\/)?(ask-)?([\w-]+)\.mp3/.exec(r.url());
     if (m) heard.push(`${m[1] ? 'Q' : 'A'}:${(m[2] ?? '').slice(-6)}`);
   });
   await screen.goto(`/screen?code=${code!}`);

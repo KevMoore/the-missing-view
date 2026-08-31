@@ -1385,3 +1385,107 @@ a:hover {
     grid-template-columns: 1fr;
   }
 }
+
+/* ---- two houses on one screen (D38) ---------------------------------------
+
+   The suspects and the interrogation stay full width across the top: both
+   houses question the same people, and both need to see the faces. Below that
+   each house gets its own column with its own board and theories. */
+
+.house-columns {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.4rem;
+  align-items: start;
+}
+.houses {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.4rem;
+  align-items: start;
+}
+.house {
+  border-top: 2px solid var(--gold);
+  padding-top: 0.7rem;
+  min-width: 0;
+}
+.house-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.8rem;
+  margin-bottom: 0.5rem;
+}
+.house-title {
+  font-family: var(--serif);
+  font-size: 1.6rem;
+  color: var(--gold-bright);
+  letter-spacing: 0.04em;
+}
+/* How close this house is to accusing — a count, never the name. A house
+   watching the other one converge on somebody would simply copy it. */
+.house-progress {
+  font-size: 0.85rem;
+  color: var(--cream-dim);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.card.accused {
+  border-color: var(--blood);
+  border-left-width: 3px;
+}
+/* Which house asked. Small: the question is what the room is reading. */
+.house-tag {
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-left: 0.4rem;
+}
+
+.compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.2rem;
+}
+.compare-house {
+  border: 1px solid var(--panel-edge);
+  padding: 1rem;
+  text-align: center;
+}
+.compare-house.won {
+  border-color: var(--gold);
+}
+.compare-name {
+  font-family: var(--serif);
+  font-size: 1.5rem;
+  color: var(--gold-bright);
+}
+.compare-verdict {
+  font-size: 1.1rem;
+  margin: 0.3rem 0 0.5rem;
+}
+.compare-house.won .compare-verdict {
+  color: var(--gold-bright);
+}
+
+@media (max-width: 1100px) {
+  .houses,
+  .compare {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Which house this phone belongs to. Two teams in one room, and the game only
+   works if nobody forgets which one they are on. */
+.house-chip {
+  text-align: center;
+  font-family: var(--serif);
+  font-size: 0.95rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gold);
+  border-bottom: 1px solid var(--panel-edge);
+  padding-bottom: 0.4rem;
+  margin: 0 0 0.5rem;
+}

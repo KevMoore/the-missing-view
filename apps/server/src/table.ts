@@ -178,9 +178,16 @@ export class Table {
 
   // ---- the suspects ----
 
-  /** Voice keys are namespaced, so two houses never fetch each other's audio. */
+  /**
+   * Voice keys are namespaced by house, so two houses never fetch each other's
+   * audio — they interrogate the same suspects and get different answers, and
+   * question ids are only unique within a game.
+   *
+   * A path segment rather than a prefix: the house is part of the address, and
+   * burying it in the id would leave `ask-` no longer at a readable position.
+   */
   voiceKey(id: string): string {
-    return `${this.id}-${id}`;
+    return `${this.id}/${id}`;
   }
 
   private async answerSuspect(move: Extract<Move, { type: 'ask-suspect' }>): Promise<void> {

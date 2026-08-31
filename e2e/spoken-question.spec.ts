@@ -17,7 +17,7 @@ test('the question is spoken before the reply, in that order', async ({ browser 
   const screen = await browser.newPage();
   const played: string[] = [];
   screen.on('response', (r) => {
-    const m = /\/voice\/[0-9A-F]{6}\/(ask-)?(.+)\.mp3/.exec(r.url());
+    const m = /\/voice\/[0-9A-F]{6}\/(?:[\w-]+\/)?(ask-)?(.+)\.mp3/.exec(r.url());
     if (m) played.push(m[1] ? 'question' : 'answer');
   });
   await screen.goto(`/screen?code=${code!}`);
