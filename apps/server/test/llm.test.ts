@@ -64,3 +64,21 @@ describe('banked answers (D15)', () => {
     expect(answer).toContain('no such person');
   });
 });
+
+describe('who a suspect is talking to', () => {
+  it('is told, so it stops guessing at their sex', async () => {
+    // A retired inspector with a moustache was being addressed as "madam",
+    // because the only thing the prompt knew about the questioner was nothing.
+    const asked = await askSuspect(
+      blackwoodHall,
+      's-reeves',
+      'Who else was awake?',
+      [],
+      'The Retired Inspector — a former Scotland Yard man — a man of sixty-two',
+    );
+    // No key in the test env, so this is the banked path; the point is only
+    // that the extra argument is accepted and does not disturb the fallback.
+    expect(asked.fromBank).toBe(true);
+    expect(asked.answer.length).toBeGreaterThan(0);
+  });
+});

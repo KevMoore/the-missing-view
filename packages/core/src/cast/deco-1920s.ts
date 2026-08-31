@@ -96,7 +96,7 @@ export const DECO_1920S_CHARACTERS: PlayerCharacter[] = [
     briefing:
       'The household barely notices you, which is its mistake. You notice everything, and you were awake past midnight.',
     botLean: 'detail',
-    voice: 'sage',
+    voice: 'alloy',
     voiceDirection:
       'British, quiet and exact — a woman of thirty-four, softly spoken and never hurried. Says less than she knows, and always has.',
   },
@@ -132,7 +132,7 @@ export const DECO_1920S_CHARACTERS: PlayerCharacter[] = [
     briefing:
       'You have walked away from two crashes and one engagement. You are the only person here who is not frightened of being wrong out loud, which makes you useful tonight.',
     botLean: 'challenge',
-    voice: 'coral',
+    voice: 'nova',
     voiceDirection:
       'British, fast and fearless — a woman of twenty-six, bright, loud, laughing at the edges of her sentences. Says the unsayable thing first.',
   },
@@ -156,7 +156,7 @@ export const DECO_1920S_CHARACTERS: PlayerCharacter[] = [
     briefing:
       'You reconstruct whole lives from a broken cup and a burial angle. A house full of people who have tidied the evidence is simply a worse-behaved dig.',
     botLean: 'detail',
-    voice: 'sage',
+    voice: 'marin',
     voiceDirection:
       'British, academic — a woman of forty-one, dry, patient, sun-worn. Speaks in complete sentences and leaves long gaps between them.',
   },
@@ -192,7 +192,7 @@ export const DECO_1920S_CHARACTERS: PlayerCharacter[] = [
     briefing:
       'You have plotted forty murders and published nine. You know how a real one differs from a good one — and which mistakes only an amateur makes.',
     botLean: 'theorise',
-    voice: 'coral',
+    voice: 'shimmer',
     voiceDirection:
       'British, quick and amused — a woman of twenty-nine, wry, a little untidy in her speech, ideas arriving faster than she can order them.',
   },
@@ -216,7 +216,7 @@ export const DECO_1920S_CHARACTERS: PlayerCharacter[] = [
     briefing:
       'Everyone talks in front of you as though you were furniture. You have been collecting what they say for two seasons and you forget nothing.',
     botLean: 'listen',
-    voice: 'coral',
+    voice: 'shimmer',
     voiceDirection:
       'British, expensively finished — a girl of nineteen, light and quick and much sharper than she is allowed to sound. Rises at the end of sentences.',
   },
@@ -264,7 +264,7 @@ export const DECO_1920S_CHARACTERS: PlayerCharacter[] = [
     briefing:
       'Every call this house made this week went through your board. You are not supposed to listen. You listened.',
     botLean: 'interrogate',
-    voice: 'sage',
+    voice: 'nova',
     voiceDirection:
       'British, small-town exchange — a woman of twenty-four, brisk and clear, the enunciation of somebody used to being misheard down a wire.',
   },
@@ -322,7 +322,7 @@ export const DECO_1920S_SUSPECTS: SuspectShell[] = [
     persona:
       'Voluble and defensive. Answers at length, in a rush, mostly about the kitchen and who has ' +
       'wronged it. Buries the one useful fact in the middle of a grievance about the fish.',
-    voice: 'coral',
+    voice: 'nova',
     voiceDirection:
       'Irish, from Cork — a woman of fifty-five, warm and very fast, sentences running into one another with no ' +
       'gap to interrupt. Rises in pitch when defensive, which is most of the time. Bustling, ' +

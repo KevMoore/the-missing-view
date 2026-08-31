@@ -145,6 +145,12 @@ export interface Suspect {
    * OpenAI speech voice — 'alloy', 'ash', 'ballad', 'coral', 'echo', 'fable',
    * 'onyx', 'nova', 'sage', 'shimmer', 'verse', 'marin', 'cedar'. The last
    * three are the newest and the most natural. Omit for a silent character.
+   *
+   * **Not `sage` or `coral` for anyone who has to be heard.** Measured against
+   * the same line, `sage` comes out five times quieter than `nova` and `coral`
+   * three times quieter; on a big screen with music under it they vanish. The
+   * loudness order, quietest last: nova, alloy, shimmer, marin, echo, onyx,
+   * cedar, ash, fable, ballad, verse, coral, sage.
    */
   voice?: string;
   /**

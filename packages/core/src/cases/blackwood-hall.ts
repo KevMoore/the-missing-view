@@ -41,7 +41,7 @@ export const blackwoodHall: CasePack = {
       persona:
         'Glacial politeness. Answers in complete, measured sentences. Deflects with ' +
         'etiquette. Never raises her voice; lowers it instead.',
-      voice: 'sage',
+      voice: 'shimmer',
       voiceDirection:
         'British, Received Pronunciation of the sharpest kind — a woman of about forty with ' +
         'every vowel paid for. Cool, slow and perfectly level; the voice of someone who has ' +
@@ -156,7 +156,7 @@ export const blackwoodHall: CasePack = {
         'Composed, intelligent, quietly formidable. Answers exactly what is asked and ' +
         'not a word more. If confronted with evidence, concedes the smallest possible ground. ' +
         'Never confesses. Never admits to being on the landing.',
-      voice: 'coral',
+      voice: 'nova',
       voiceDirection:
         'British, north of England underneath — a woman of thirty-two whose Yorkshire vowels ' +
         'have been almost entirely trained out and surface only when she is startled. ' +

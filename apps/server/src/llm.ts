@@ -91,7 +91,7 @@ export function violatesForbiddenFacts(pack: CasePack, reply: string): boolean {
   });
 }
 
-function suspectPrompt(pack: CasePack, suspect: Suspect): string {
+function suspectPrompt(pack: CasePack, suspect: Suspect, askedBy?: string): string {
   const k = suspect.knowledge;
   return [
     `You are ${suspect.name}, a character in a 1920s murder-mystery party game.`,
@@ -99,6 +99,16 @@ function suspectPrompt(pack: CasePack, suspect: Suspect): string {
     `The victim: ${pack.victim.name}. ${pack.victim.discovery}`,
     `Your public face: ${suspect.publicBio}`,
     `Your manner: ${suspect.persona}`,
+    // Without this a suspect guesses, and guesses wrong: a retired inspector
+    // with a moustache was being called "madam".
+    ...(askedBy
+      ? [
+          '',
+          `You are being questioned by ${askedBy}.`,
+          'If you address them at all, address them correctly for who they are. ' +
+            'Never guess at their sex — it is stated above. When in doubt use no form of address.',
+        ]
+      : []),
     '',
     'You know these things and will share them if asked well:',
     ...k.knows.map((s) => `- ${s}`),
@@ -123,6 +133,8 @@ export async function askSuspect(
   suspectId: string,
   question: string,
   history: { question: string; answer: string }[],
+  /** Who is asking. Without it a suspect calls a retired inspector "madam". */
+  askedBy?: string,
 ): Promise<{ answer: string; fromBank: boolean }> {
   const suspect = pack.suspects.find((s) => s.id === suspectId);
   if (!suspect) return { answer: 'There is no such person in this house.', fromBank: true };
@@ -132,7 +144,7 @@ export async function askSuspect(
     const response = await client.responses.create(
       {
         model: MODEL,
-        instructions: suspectPrompt(pack, suspect),
+        instructions: suspectPrompt(pack, suspect, askedBy),
         input: [
           ...history.flatMap((h) => [
             { role: 'user' as const, content: h.question },

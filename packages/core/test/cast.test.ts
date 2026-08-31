@@ -172,3 +172,31 @@ describe('the players have voices too', () => {
     expect(american.map((c) => c.id)).toEqual(['pc-heiress']);
   });
 });
+
+describe('every voice can actually be heard', () => {
+  /**
+   * Measured against one line through gpt-4o-mini-tts: `sage` is five times
+   * quieter than `nova` and `coral` three times. Lady Margaret was on `sage`
+   * and was inaudible under the score in a real session.
+   */
+  const TOO_QUIET = ['sage', 'coral'];
+
+  it('keeps the quiet voices away from the suspects', () => {
+    for (const s of blackwoodHall.suspects)
+      expect(TOO_QUIET, `${s.name} is on ${s.voice ?? 'nothing'}`).not.toContain(s.voice);
+  });
+
+  it('keeps them away from the narrator', () => {
+    expect(TOO_QUIET).not.toContain(blackwoodHall.prologue?.voice);
+  });
+
+  it('keeps them away from the player roles, who ask aloud too', () => {
+    for (const c of DECO_1920S_CHARACTERS)
+      expect(TOO_QUIET, `${c.name} is on ${c.voice ?? 'nothing'}`).not.toContain(c.voice);
+  });
+
+  it('keeps them out of the shells a future case would inherit', () => {
+    for (const s of DECO_1920S_SUSPECTS)
+      expect(TOO_QUIET, `${s.name} is on ${s.voice ?? 'nothing'}`).not.toContain(s.voice);
+  });
+});

@@ -206,7 +206,13 @@ export class Room {
     // the room can be hearing them while the model writes the reply.
     void this.speakAsk(move.questionId, move.playerId, move.text);
     const history = this.qaHistory.get(move.suspectId) ?? [];
-    const { answer, fromBank } = await askSuspect(this.pack, move.suspectId, move.text, history);
+    const { answer, fromBank } = await askSuspect(
+      this.pack,
+      move.suspectId,
+      move.text,
+      history,
+      this.describeAsker(move.playerId),
+    );
     history.push({ question: move.text, answer });
     this.qaHistory.set(move.suspectId, history.slice(-10));
     if (this.state) {
@@ -228,6 +234,18 @@ export class Room {
     // The written answer is already on the screen, so the voice is chased
     // separately: the room reads it while the speech is still being made.
     void this.speak(move.questionId, move.suspectId, answer);
+  }
+
+  /**
+   * Who a suspect is talking to, in the suspect's own terms. The character's
+   * vocal direction is used because it is the one field that states their sex
+   * and age plainly, which is exactly what was being guessed at.
+   */
+  private describeAsker(playerId: string): string | undefined {
+    const characterId = this.state?.players.find((p) => p.id === playerId)?.characterId;
+    const c = this.pack.characters.find((x) => x.id === characterId);
+    if (!c) return undefined;
+    return [c.name, c.role, c.voiceDirection].filter(Boolean).join(' — ');
   }
 
   /** The asker's question, in the voice of the character they were dealt. */
