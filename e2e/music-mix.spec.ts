@@ -45,3 +45,45 @@ test('the score sits under the opening, not over it', async ({ browser }) => {
   expect(settled?.volume ?? 1, 'the duck was lifted by the idle voice queue').toBeLessThan(0.1);
   expect(settled?.src).toContain('prologue');
 });
+
+test('a speaking suspect takes the score right down', async ({ browser }) => {
+  test.setTimeout(120_000);
+  const con = await browser.newPage();
+  await con.goto('/console');
+  await con.getByRole('button', { name: 'Open the house' }).click();
+  const roomText = await con.getByText(/Room [0-9A-F]{6}/).textContent();
+  const code = /Room ([0-9A-F]{6})/.exec(roomText ?? '')?.[1];
+  for (let i = 0; i < 3; i++) await con.getByRole('button', { name: 'Add an AI player' }).click();
+
+  const screen = await browser.newPage();
+  const spoken: string[] = [];
+  screen.on('response', (r) => {
+    if (r.url().includes('/voice/')) spoken.push(r.url());
+  });
+  await screen.setViewportSize({ width: 1440, height: 900 });
+  await screen.goto(`/screen?code=${code!}`);
+  await screen.getByRole('button', { name: 'Take the stage' }).click();
+
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const phone = await ctx.newPage();
+  await phone.goto(`/?code=${code!}`);
+  await phone.getByLabel('Your first name').fill('Kev');
+  await phone.getByRole('button', { name: 'Step inside' }).click();
+  await expect(phone.getByText('You’re in.')).toBeVisible();
+  await con.getByRole('button', { name: /Start Act 1/ }).click();
+
+  // in-game, nobody speaking: the bed is audible
+  await expect.poll(() => level(screen).then((l) => l?.volume ?? 0)).toBeGreaterThan(0.1);
+
+  await phone.getByRole('button', { name: 'suspects' }).click();
+  await phone.getByLabel('Choose a suspect').selectOption({ label: 'Mr Thomas Reeves' });
+  await phone.getByLabel('Your question').fill('Were the doors bolted all night?');
+  await phone.getByRole('button', { name: 'Put it to them' }).click();
+
+  // the screen fetches the reply as audio...
+  await expect.poll(() => spoken.length, { timeout: 20_000 }).toBeGreaterThan(0);
+  // ...and while it plays, the score gets right out of the way
+  await expect
+    .poll(() => level(screen).then((l) => l?.volume ?? 1), { timeout: 10_000 })
+    .toBeLessThan(0.05);
+});

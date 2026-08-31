@@ -122,7 +122,9 @@ const server = createServer((req, res) => {
         return;
       }
       res.writeHead(200, {
-        'content-type': 'audio/mpeg',
+        // Real speech is mp3; the test tone is a WAV, and a browser will not
+        // play one labelled as the other.
+        'content-type': audio.subarray(0, 4).toString() === 'RIFF' ? 'audio/wav' : 'audio/mpeg',
         'content-length': audio.length,
         'cache-control': 'no-store',
       });

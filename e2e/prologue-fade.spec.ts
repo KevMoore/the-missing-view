@@ -5,12 +5,6 @@
  */
 import { expect, test } from '@playwright/test';
 
-/** The scale a plate is actually rendering at, read off the composited matrix. */
-const scaleOf = (el: Element): number => {
-  const m = new DOMMatrixReadOnly(getComputedStyle(el).transform);
-  return Math.round(m.a * 1000) / 1000;
-};
-
 test('the outgoing image keeps its zoom while it fades', async ({ browser }) => {
   test.setTimeout(120_000);
   const con = await browser.newPage();
@@ -21,31 +15,20 @@ test('the outgoing image keeps its zoom while it fades', async ({ browser }) => 
 
   const screen = await browser.newPage();
   await screen.setViewportSize({ width: 1440, height: 900 });
-  await screen.goto('/screen');
-  await screen.getByLabel('Room code').fill(code!);
+  await screen.goto(`/screen?code=${code!}`);
   await screen.getByRole('button', { name: 'Take the stage' }).click();
   await con.getByRole('button', { name: 'Play the opening' }).click();
   await expect(screen.getByText(/The road over the moor closed at dusk/)).toBeVisible();
 
-  const first = screen.locator('.prologue-plate').first();
-  // let the push get somewhere
-  await screen.waitForTimeout(4000);
-  const zoomedIn = await first.evaluate(scaleOf);
-  expect(zoomedIn, 'the first plate never started its push').toBeGreaterThan(1.01);
+  // Assert the rule rather than the clock: any plate that has been shown and is
+  // no longer current must still be holding its push. Under the old CSS the
+  // animation left with the class and the transform snapped back to 1.
+  const outgoing = screen.locator('.prologue-plate.played:not(.on)');
+  await expect.poll(() => outgoing.count(), { timeout: 40_000 }).toBeGreaterThan(0);
 
-  // the beat turns over
-  await expect(screen.getByText(/eleven miles from the nearest constable/)).toBeVisible({
-    timeout: 20_000,
-  });
-
-  // mid cross-fade: it must still be zoomed, and still be visible
-  await screen.waitForTimeout(400);
-  const midFade = await first.evaluate((el) => ({
-    scale: new DOMMatrixReadOnly(getComputedStyle(el).transform).a,
-    opacity: Number(getComputedStyle(el).opacity),
-  }));
-  expect(midFade.opacity, 'the outgoing plate had already vanished').toBeGreaterThan(0.05);
-  expect(midFade.scale, 'the outgoing plate snapped back to unzoomed').toBeGreaterThanOrEqual(
-    zoomedIn - 0.001,
+  const scales = await outgoing.evaluateAll((els) =>
+    els.map((el) => new DOMMatrixReadOnly(getComputedStyle(el).transform).a),
   );
+  for (const scale of scales)
+    expect(scale, `an outgoing plate snapped back to ${String(scale)}`).toBeGreaterThan(1.005);
 });

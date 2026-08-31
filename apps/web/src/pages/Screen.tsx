@@ -50,20 +50,32 @@ function useShortScreen(): boolean {
 function Who({
   player,
   prefix,
+  trailing = false,
 }: {
   player: ScreenPlayer | undefined;
   prefix?: string | undefined;
+  /**
+   * Face after the name rather than before it.
+   *
+   * In a right-aligned row the name ends flush and the face floats wherever the
+   * name happens to start, so a column of them staggers and the eye catches on
+   * every line. Putting the face last lines them all up against the edge.
+   * Reading order in a sentence — "Ana asks Reeves" — still wants it first.
+   */
+  trailing?: boolean;
 }) {
   if (!player) return null;
+  const face = player.portraitAsset !== undefined && (
+    <img src={player.portraitAsset} alt="" aria-hidden className="who-face" />
+  );
   return (
     <span className="who-chip">
-      {player.portraitAsset !== undefined && (
-        <img src={player.portraitAsset} alt="" aria-hidden className="who-face" />
-      )}
+      {!trailing && face}
       <span>
         {prefix}
         {player.name}
       </span>
+      {trailing && face}
     </span>
   );
 }
@@ -94,7 +106,9 @@ function Earlier({
 export function Screen() {
   const [view, setView] = useState<ScreenView | null>(null);
   const [joined, setJoined] = useState(() => Boolean(sessionStorage.getItem('tmv-screen-room')));
-  const [codeInput, setCodeInput] = useState('');
+  const [codeInput, setCodeInput] = useState(
+    () => new URLSearchParams(location.search).get('code')?.toUpperCase() ?? '',
+  );
   const [now, setNow] = useState(Date.now());
   const [muted, setMuted] = useState(() => sessionStorage.getItem('tmv-muted') === '1');
   const short = useShortScreen();
@@ -199,6 +213,12 @@ export function Screen() {
                 }}
                 aria-label="Room code"
               />
+              {/*
+                Prefilled, never auto-submitted. This click is the only user
+                gesture the screen ever gets, and on iOS it is what buys
+                permission to make a sound for the rest of the night. A screen
+                that joined itself would be a silent one.
+              */}
               <button
                 className="mt"
                 style={{ width: '100%' }}
@@ -317,7 +337,7 @@ export function Screen() {
                 <div className="card fade-up" key={t.id}>
                   <p>“{t.text}”</p>
                   <div className="byline">
-                    <Who player={cast.get(t.by)} prefix="— " />
+                    <Who player={cast.get(t.by)} prefix="— " trailing />
                   </div>
                   <div className="byline">
                     backed by {t.backers.length} · challenged by {t.challengers.length}
@@ -344,7 +364,7 @@ export function Screen() {
                 <h3>{c.title}</h3>
                 <p>{c.text}</p>
                 <div className="byline">
-                  <Who player={cast.get(c.by)} prefix="tabled by " />
+                  <Who player={cast.get(c.by)} prefix="tabled by " trailing />
                 </div>
               </div>
             ))}
@@ -352,7 +372,7 @@ export function Screen() {
               <div className="card-slim" key={c.clueId}>
                 <span className="grow">{c.title}</span>
                 <span className="byline">
-                  <Who player={cast.get(c.by)} />
+                  <Who player={cast.get(c.by)} trailing />
                 </span>
               </div>
             ))}

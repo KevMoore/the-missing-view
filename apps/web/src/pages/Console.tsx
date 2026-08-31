@@ -82,7 +82,9 @@ export function Console() {
 
   const phase = view?.phase ?? 'lobby';
   const joinUrl = location.host;
-  const screenUrl = `${location.origin}/screen`;
+  // The code travels with the link. Opening the screen used to mean switching
+  // tabs, reading six characters off this page and typing them into that one.
+  const screenUrl = `${location.origin}/screen?code=${roomCode}`;
   const inviteUrl = `${location.origin}/?code=${roomCode}`;
   return (
     <div className="stage" style={{ maxWidth: 760 }}>

@@ -27,6 +27,20 @@ const SPEECH_MODEL = 'gpt-4o-mini-tts';
  * accent — it will happily be delivered by a Californian. In a 1926 English
  * country house one American vowel undoes the whole room.
  */
+/**
+ * Half a second of silence, as a WAV.
+ *
+ * With no API key there is no audio at all, so the entire spoken layer — the
+ * queue, the ducking, the pacing of the opening — was untestable except against
+ * production. Under TMV_TEST the same code paths run and produce something a
+ * browser will actually play, which is the difference between reasoning about
+ * the mix and measuring it.
+ */
+const TEST_TONE = Buffer.concat([
+  Buffer.from('UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=', 'base64'),
+  Buffer.alloc(4000, 128),
+]);
+
 const BRITISH =
   'Speak in British English throughout, with a British accent. This is not optional and ' +
   'overrides any default. Never American, Canadian or transatlantic. British vowels, British ' +
@@ -160,6 +174,7 @@ export async function speakAnswer(
   text: string,
 ): Promise<Buffer | null> {
   const suspect = pack.suspects.find((s) => s.id === suspectId);
+  if (process.env.TMV_TEST) return TEST_TONE;
   if (!client || !suspect?.voice || !text) return null;
   try {
     const speech = await client.audio.speech.create(
@@ -191,6 +206,7 @@ export async function speakAnswer(
 /** One beat of the opening, in the narrator's voice. Null on any failure. */
 export async function narrate(pack: CasePack, text: string): Promise<Buffer | null> {
   const prologue = pack.prologue;
+  if (process.env.TMV_TEST) return TEST_TONE;
   if (!client || !prologue?.voice || !text) return null;
   try {
     const speech = await client.audio.speech.create(

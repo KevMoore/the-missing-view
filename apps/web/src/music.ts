@@ -12,7 +12,7 @@ import type { Music } from './ws.js';
 
 /** In-game sits under the menu theme: the room is talking over it. */
 const MENU_VOLUME = 0.55;
-const IN_GAME_VOLUME = 0.3;
+const IN_GAME_VOLUME = 0.2;
 /**
  * The opening is a spoken piece with a bed under it, not a music cue with words
  * over the top. This is the level between lines; under the narrator it drops
@@ -48,8 +48,14 @@ let fadeTimer: number | null = null;
  */
 const duckers = new Set<string>();
 
-/** How far the score drops while anyone is speaking on the screen. */
-const DUCK = 0.22;
+/**
+ * How far the score drops while anyone is speaking on the screen.
+ *
+ * Deep, because a speech element cannot be turned up past 1.0 and the model's
+ * output is not loud to begin with. If a suspect is talking, the only thing
+ * that can give way is the music.
+ */
+const DUCK = 0.1;
 
 function fadeTo(target: number, ms: number, done?: () => void): void {
   const node = el;
