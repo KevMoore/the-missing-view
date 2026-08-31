@@ -92,4 +92,8 @@ test('shots of a two-house game', async ({ browser }) => {
   await screen.waitForTimeout(3000);
   await screen.screenshot({ path: `${OUT}/08-reveal.png`, fullPage: true });
   await facilitator.screenshot({ path: `${OUT}/09-console-reveal.png`, fullPage: true });
+
+  // Ten pages, each with a live socket and an audio element. Left open, the run
+  // writes every shot and then hangs until the test times out.
+  for (const page of [facilitator, ...screens, ...phones]) await page.close();
 });

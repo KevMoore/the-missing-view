@@ -163,3 +163,33 @@ test('a screen with no house is asked which one, and shows nothing until it says
   await expect(monitor.getByText('House One')).toBeVisible();
   await expect(monitor.getByText('House Two')).toBeVisible();
 });
+
+test('the two houses are compared, but only once both have finished', async ({ browser }) => {
+  test.setTimeout(120_000);
+  const { facilitator, phones, code } = await openTwoHouseRoom(browser);
+  await facilitator.getByRole('button', { name: /Start Act 1/ }).click();
+
+  const screen = await browser.newPage();
+  await screen.goto(`/screen?code=${code}&house=h1`);
+  await screen.getByRole('button', { name: 'Take the stage' }).click();
+
+  // Straight to act 3, where one house accuses and the other does not.
+  for (let i = 0; i < 2; i++) {
+    await facilitator.getByRole('button', { name: /Close the act/ }).click();
+    await facilitator.getByRole('button', { name: /Begin Act/ }).click();
+  }
+  for (const phone of [phones[0]!, phones[2]!, phones[4]!, phones[6]!]) {
+    await phone.getByRole('button', { name: 'decide' }).click();
+    await phone.getByLabel('The killer').selectOption({ label: 'Miss Evelyn Cross' });
+    await phone.getByRole('button', { name: 'I say it was them' }).click();
+  }
+  await expect(phones[0]!.getByText('The house has accused')).toBeVisible({ timeout: 10_000 });
+
+  // Mid-game there is nothing to compare: a live scoreboard is a copying aid.
+  await expect(screen.getByText('How the two houses did')).toBeHidden();
+
+  await facilitator.getByRole('button', { name: /Close the act/ }).click();
+  await facilitator.getByRole('button', { name: /End the game/ }).click();
+  await expect(screen.getByText('How the two houses did')).toBeVisible({ timeout: 20_000 });
+  await expect(screen.locator('.compare-verdict')).toHaveText(['Solved it', 'Got it wrong']);
+});

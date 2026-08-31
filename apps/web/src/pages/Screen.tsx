@@ -448,30 +448,6 @@ export function Screen() {
         </div>
       </header>
 
-      {view.comparison && (
-        <div className="deco-frame mb fade-up">
-          <div className="deco-rule">How the two houses did</div>
-          <div className="compare">
-            {view.comparison.map((h) => (
-              <div className={`compare-house${h.solved ? ' won' : ''}`} key={h.id}>
-                <div className="compare-name">{h.name}</div>
-                <div className="compare-verdict">{h.solved ? 'Solved it' : 'Got it wrong'}</div>
-                <div className="muted small">
-                  {h.minutes} min · {h.cluesTabled} clues · {h.theoriesProposed} theories ·{' '}
-                  {h.questionsAsked} questions
-                </div>
-              </div>
-            ))}
-          </div>
-          {/* Said plainly, because the competition is the hook and the point is
-              the debrief: two teams given the same case rarely fail the same way. */}
-          <p className="center muted small mt">
-            The interesting question is not which house won. It is what each of them did differently
-            with the same evidence.
-          </p>
-        </div>
-      )}
-
       {view.phase === 'commitment' && view.commitmentPrompt && (
         <div className="deco-frame mb fade-up">
           <div className="deco-rule">The house must decide</div>
@@ -740,6 +716,30 @@ function Reveal({ view }: { view: ScreenView }) {
       <h1 className="title" style={{ fontSize: '2.2rem' }}>
         {reveal.solved ? 'The house was right.' : 'The house was wrong.'}
       </h1>
+      {/* Both houses have finished by now, so this is the one moment in the
+          session where a house may see the other's work — and the only figure
+          worth putting first is not the winner. */}
+      {view.comparison && (
+        <div className="deco-frame mt fade-up">
+          <div className="deco-rule">How the two houses did</div>
+          <div className="compare">
+            {view.comparison.map((h) => (
+              <div className={`compare-house${h.solved ? ' won' : ''}`} key={h.id}>
+                <div className="compare-name">{h.name}</div>
+                <div className="compare-verdict">{h.solved ? 'Solved it' : 'Got it wrong'}</div>
+                <div className="muted small">
+                  {h.minutes} min · {h.cluesTabled} clues · {h.theoriesProposed} theories ·{' '}
+                  {h.questionsAsked} questions
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="center muted small mt">
+            The interesting question is not which house won. It is what each of them did differently
+            with the same evidence.
+          </p>
+        </div>
+      )}
       <div className="deco-frame mt mb fade-up">
         <div className="deco-rule">What really happened</div>
         <p style={{ fontFamily: 'var(--serif)', fontSize: '1.15rem', lineHeight: 1.8 }}>
