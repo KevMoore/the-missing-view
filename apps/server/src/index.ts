@@ -3,7 +3,6 @@
  * HTTP serves the built web client; WS carries the game (D19/D20).
  */
 import { createServer } from 'node:http';
-import { timingSafeEqual } from 'node:crypto';
 import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -30,8 +29,6 @@ for (const pack of cases.values()) {
 
 const rooms = new Map<string, Room>();
 
-/** Unset means the insights endpoint does not exist at all. */
-const INSIGHTS_KEY = process.env.TMV_INSIGHTS_KEY ?? '';
 /**
  * Default baseline: sessions before this are kept but not counted. Set it once
  * the rehearsals are over, rather than deleting the rows they wrote.
@@ -42,13 +39,6 @@ function parseDate(value: string | undefined): Date | undefined {
   if (!value) return undefined;
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? undefined : d;
-}
-
-/** Constant time, so a wrong key cannot be narrowed down by how fast it fails. */
-function sameKey(given: string, expected: string): boolean {
-  const a = Buffer.from(given);
-  const b = Buffer.from(expected);
-  return a.length === b.length && timingSafeEqual(a, b);
 }
 
 /**
@@ -89,12 +79,6 @@ const server = createServer((req, res) => {
     // key is configured: this is session data, and D21's "security light" is a
     // reason to keep the surface small, not to leave it open.
     if (req.url?.startsWith('/api/insights')) {
-      const key = new URL(req.url, 'http://x').searchParams.get('key') ?? '';
-      if (!INSIGHTS_KEY || !sameKey(key, INSIGHTS_KEY)) {
-        res.writeHead(404);
-        res.end();
-        return;
-      }
       // An explicit ?since wins over the configured baseline, so a bad
       // baseline is a question away from being corrected rather than a deploy.
       const asked = parseDate(new URL(req.url, 'http://x').searchParams.get('since') ?? undefined);
@@ -329,5 +313,8 @@ server.listen(PORT, () => {
   );
   console.log(`  llm: ${llmConfigured() ? 'live' : 'banked answers (OPENAI_API_KEY unset)'}`);
   console.log(`  db: ${dbConfigured() ? 'postgres' : 'in-memory (DATABASE_URL unset)'}`);
-  console.log(`  insights: ${INSIGHTS_KEY ? '/insights?key=…' : 'off (TMV_INSIGHTS_KEY unset)'}`);
+  console.log(
+    `  insights: /insights` +
+      (INSIGHTS_SINCE ? ` counting from ${INSIGHTS_SINCE.toISOString().slice(0, 10)}` : ''),
+  );
 });

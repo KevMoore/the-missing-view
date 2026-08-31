@@ -185,6 +185,24 @@ export interface PrivateReveal {
 
 export interface TeamShapeReveal {
   shape: string;
+  /**
+   * How the session actually went, for the facilitator to talk through
+   * (PRD §11, §14). Aggregate only — the debrief answers are counted, never
+   * attributed, and the free text is unsigned (D11).
+   */
+  postMortem?: {
+    solved: boolean;
+    accused?: string;
+    culprit: string;
+    minutes: number;
+    cluesTabled: number;
+    cluesTotal: number;
+    questionsAsked: number;
+    theoriesProposed: number;
+    challengesRaised: number;
+    /** 0 when everyone contributed equally, 1 when one player did everything. */
+    dominance: number;
+  };
   missingViews: string[];
   debriefPrompts: string[];
   /**

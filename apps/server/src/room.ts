@@ -177,7 +177,7 @@ export class Room {
     if (!this.state) throw new IllegalMove('no players joined yet');
     this.state = applyFacilitator(this.pack, this.state, { type: action }, Date.now());
     if (this.state.phase === 'reveal' && !this.reveal) {
-      this.reveal = await buildReveal(this.pack, this.state);
+      this.reveal = await buildReveal(this.pack, this.state, this.bots.ids);
     }
     this.nudge = null;
     this.pushViews();

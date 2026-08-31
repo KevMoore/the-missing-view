@@ -17,26 +17,18 @@ import type { Insights as Data } from '../ws.js';
 export function Insights() {
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState('');
-  const params = new URLSearchParams(location.search);
-  const key = params.get('key') ?? '';
-  const since = params.get('since') ?? '';
+  const since = new URLSearchParams(location.search).get('since') ?? '';
 
   useEffect(() => {
-    if (!key) {
-      setError('This page needs a key.');
-      return;
-    }
-    fetch(
-      `/api/insights?key=${encodeURIComponent(key)}${since ? `&since=${encodeURIComponent(since)}` : ''}`,
-    )
+    fetch(`/api/insights${since ? `?since=${encodeURIComponent(since)}` : ''}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
       .then((d: Data) => {
         setData(d);
       })
       .catch(() => {
-        setError('Not available. Check the key, and that TMV_INSIGHTS_KEY is set on the server.');
+        setError('No results yet. Games are only recorded when DATABASE_URL is set.');
       });
-  }, [key, since]);
+  }, [since]);
 
   if (error) return <div className="stage center muted">{error}</div>;
   if (!data) return <div className="stage center muted">Reading the sessions…</div>;
@@ -66,9 +58,7 @@ export function Insights() {
           <>
             {' · '}
             counting from {data.since.slice(0, 10)}{' '}
-            <a href={`${location.pathname}?key=${encodeURIComponent(key)}&since=1970-01-01`}>
-              show everything
-            </a>
+            <a href={`${location.pathname}?since=1970-01-01`}>show everything</a>
           </>
         )}
       </p>

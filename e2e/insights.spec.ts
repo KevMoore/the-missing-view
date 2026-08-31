@@ -5,23 +5,18 @@
  */
 import { expect, test } from '@playwright/test';
 
-test('the endpoint does not exist without a key on the server', async ({ request }) => {
-  for (const url of ['/api/insights', '/api/insights?key=', '/api/insights?key=guess']) {
-    const res = await request.get(url);
-    expect(res.status(), url).toBe(404);
-    expect(await res.text()).toBe('');
-  }
+test('the results are reachable without a key', async ({ request }) => {
+  // A special URL protecting one page while the console beside it is wide open
+  // was not protection, it was friction. Gating the console is the real answer,
+  // and it is not this change.
+  const res = await request.get('/api/insights');
+  expect(res.status()).toBe(200);
+  expect(await res.json()).toHaveProperty('sessions');
 });
 
-test('the page asks for a key rather than showing an empty dashboard', async ({ page }) => {
+test('with no database it says so rather than showing zeroes', async ({ page }) => {
   await page.goto('/insights');
-  await expect(page.getByText('This page needs a key.')).toBeVisible();
-});
-
-test('a wrong key says what to check, and shows no data', async ({ page }) => {
-  await page.goto('/insights?key=wrong');
-  await expect(page.getByText(/TMV_INSIGHTS_KEY is set on the server/)).toBeVisible();
-  await expect(page.locator('.headline-figure')).toHaveCount(0);
+  await expect(page.getByText(/Nothing yet|No results yet/)).toBeVisible();
 });
 
 test('the page states its window rather than implying it is everything', async ({ page }) => {

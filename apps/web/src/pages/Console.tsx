@@ -375,6 +375,40 @@ export function Console() {
               ))}
             </>
           )}
+          {view.teamReveal.postMortem && (
+            <>
+              <div className="deco-rule mt">How it went</div>
+              <p className="mb" style={{ lineHeight: 1.7 }}>
+                {view.teamReveal.postMortem.solved
+                  ? `They named ${view.teamReveal.postMortem.culprit}, and they were right.`
+                  : view.teamReveal.postMortem.accused
+                    ? `They named ${view.teamReveal.postMortem.accused}. It was ${view.teamReveal.postMortem.culprit}.`
+                    : `They never accused anybody. It was ${view.teamReveal.postMortem.culprit}.`}
+              </p>
+              <div className="split">
+                <Stat label="Minutes" value={String(view.teamReveal.postMortem.minutes)} />
+                <Stat
+                  label="Clues tabled"
+                  value={`${String(view.teamReveal.postMortem.cluesTabled)}/${String(view.teamReveal.postMortem.cluesTotal)}`}
+                />
+                <Stat label="Questions" value={String(view.teamReveal.postMortem.questionsAsked)} />
+                <Stat
+                  label="Theories"
+                  value={String(view.teamReveal.postMortem.theoriesProposed)}
+                />
+                <Stat
+                  label="Challenges"
+                  value={String(view.teamReveal.postMortem.challengesRaised)}
+                />
+                <Stat label="Dominance" value={view.teamReveal.postMortem.dominance.toFixed(2)} />
+              </div>
+              <p className="muted small mt" style={{ lineHeight: 1.6 }}>
+                Dominance runs 0 to 1: zero when everyone contributed equally, one when a single
+                player did everything. It does not say who.
+              </p>
+            </>
+          )}
+
           {view.teamReveal.moments.length > 0 && (
             <>
               <div className="deco-rule mt">The eight moments</div>
@@ -409,6 +443,12 @@ export function Console() {
               — {q}
             </p>
           ))}
+          <p className="muted small mt">
+            <a href="/insights" target="_blank" rel="noreferrer">
+              Results across every session ↗
+            </a>{' '}
+            — including what players said they would do differently.
+          </p>
         </div>
       )}
       {error && <div className="toast">{error}</div>}
@@ -420,4 +460,14 @@ export function Console() {
 function overrunning(view: ConsoleView | null, now: number): boolean {
   if (!view?.actStartedAt) return false;
   return now > view.actStartedAt + view.actMinutes * 60_000;
+}
+
+/** A single figure with its label, for the post-mortem. */
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="stat">
+      <div className="stat-value">{value}</div>
+      <div className="stat-label">{label}</div>
+    </div>
+  );
 }

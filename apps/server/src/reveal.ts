@@ -4,6 +4,7 @@
  * phrases the shared lines, with a deterministic fallback.
  */
 import {
+  computeMetrics,
   computeDecisions,
   DECISION_LABEL,
   DECISION_LINE,
@@ -35,7 +36,11 @@ export interface RevealBundle {
   teamShape: TeamShapeReveal;
 }
 
-export async function buildReveal(pack: CasePack, state: GameState): Promise<RevealBundle> {
+export async function buildReveal(
+  pack: CasePack,
+  state: GameState,
+  botIds: ReadonlySet<string> = new Set(),
+): Promise<RevealBundle> {
   const counters = computeCounters(state, pack.solution.provenBy);
   const byId = new Map(state.players.map((p) => [p.id, p]));
   const moments = computeMoments(pack, state);
@@ -103,6 +108,7 @@ export async function buildReveal(pack: CasePack, state: GameState): Promise<Rev
         ...(m.response ? { response: m.response } : {}),
         ...(m.offered ? {} : { absentNote: MOMENT_ABSENT[m.moment] }),
       })),
+      postMortem(pack, state, botIds),
     ),
   };
 }
@@ -147,9 +153,40 @@ function quieterSide(c: PlayerCounters): string {
   return 'You did a bit of everything. Which of these felt most like you?';
 }
 
+/**
+ * The facts of the session, for the facilitator to talk through afterwards
+ * (PRD §11 and §14 want fifteen to twenty minutes of debrief).
+ *
+ * Reuses the metrics the game already computes for itself, so there is one set
+ * of numbers rather than two that can disagree. Nothing here is per-person:
+ * `dominance` says whether one player carried the room without saying which,
+ * which is the most a facilitator surface may know (D11).
+ */
+function postMortem(
+  pack: CasePack,
+  state: GameState,
+  botIds: ReadonlySet<string>,
+): TeamShapeReveal['postMortem'] {
+  const m = computeMetrics(pack, state, botIds);
+  const name = (id?: string) => pack.suspects.find((s) => s.id === id)?.name;
+  return {
+    solved: m.solved,
+    ...(state.accusation ? { accused: name(state.accusation.culpritId) ?? '' } : {}),
+    culprit: name(pack.solution.culpritId) ?? '',
+    minutes: m.durationMinutes,
+    cluesTabled: m.cluesTabled,
+    cluesTotal: m.cluesAvailable,
+    questionsAsked: m.questionsAsked,
+    theoriesProposed: m.theoriesProposed,
+    challengesRaised: m.challengesRaised,
+    dominance: m.dominance,
+  };
+}
+
 function teamShape(
   entries: { strength: Strength; counters: PlayerCounters }[],
   moments: TeamShapeReveal['moments'],
+  pack?: TeamShapeReveal['postMortem'],
 ): TeamShapeReveal {
   const present = new Set(entries.map((e) => e.strength));
   const all: Strength[] = [
@@ -168,6 +205,7 @@ function teamShape(
   const walkedPast = moments.filter((m) => m.offered && !m.landed);
 
   return {
+    ...(pack ? { postMortem: pack } : {}),
     shape:
       `This team leaned ${[...present].map((s) => STRENGTH_LABEL[s]).join(', ')}. ` +
       `It reached ${String(moments.length - never.length)} of the ${String(moments.length)} team moments this case was built around. ` +

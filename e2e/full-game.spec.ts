@@ -148,10 +148,18 @@ test('a full game of Death at Blackwood Hall', async ({ browser }) => {
   await ana.getByRole('button', { name: 'Send' }).click();
   await expect(ana.getByText('That helps more than you would think.')).toBeVisible();
 
-  // Email opt-in from Ana's private read.
-  await ana.getByLabel('Email address').fill('ana@example.com');
-  await ana.getByRole('button', { name: 'Email me my read' }).click();
-  await expect(ana.getByText(/on its way/)).toBeVisible();
+  // Keeping the read is a mailto, not an email system: no address is taken and
+  // nothing is sent from here.
+  await expect(ana.getByText(/never leaves your phone/)).toBeVisible();
+  await expect(ana.getByLabel('Email address')).toHaveCount(0);
+
+  // The facilitator gets the session to talk through, and a way to the rest.
+  await expect(facilitator.getByText('How it went')).toBeVisible();
+  await expect(facilitator.getByText(/It was Miss Evelyn Cross|and they were right/)).toBeVisible();
+  await expect(facilitator.getByText('Dominance', { exact: true })).toBeVisible();
+  await expect(
+    facilitator.getByRole('link', { name: /Results across every session/ }),
+  ).toBeVisible();
 });
 
 test('accusation flow in act 3', async ({ browser }) => {

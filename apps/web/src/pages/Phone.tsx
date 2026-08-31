@@ -475,10 +475,39 @@ function Decide({ view, send }: { view: PhoneView; send: Send }) {
   return <p className="muted center mt">Nothing to decide yet. Keep investigating.</p>;
 }
 
+/**
+ * The player's own read, as a mail their phone can open.
+ *
+ * Deliberately not an email system. Sending mail means holding an address,
+ * keeping it safe, honouring a deletion request for it and running something
+ * that can actually deliver — none of which this game needs in order to let
+ * somebody keep a paragraph about themselves.
+ */
+function readAsMailto(view: PhoneView): string {
+  const r = view.privateReveal;
+  const lines = [
+    `The Missing View — ${view.roomCode}`,
+    '',
+    `You were ${r?.headline ?? ''}.`,
+    '',
+    ...(r?.evidence ?? []).map((line) => `- ${line}`),
+    '',
+    ...(r?.decision ? [`How you decided: ${r.decision.label}`, r.decision.line, ''] : []),
+    'The quieter side',
+    r?.quieterSide ?? '',
+    '',
+    'Worth asking yourself',
+    '- What role did you naturally fall into?',
+    '- Did that surprise you?',
+    '- When did you feel most useful?',
+    '- Did you behave differently from how you expected?',
+  ];
+  return `mailto:?subject=${encodeURIComponent('Your read — The Missing View')}&body=${encodeURIComponent(lines.join('\n'))}`;
+}
+
 function PrivateRead({ view, send }: { view: PhoneView; send: Send }) {
   const reveal = view.privateReveal;
   if (!reveal) return null;
-  const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
   return (
     <div className="phone-stage">
@@ -529,29 +558,27 @@ function PrivateRead({ view, send }: { view: PhoneView; send: Send }) {
       <div className="deco-frame mt">
         <div className="deco-rule">Keep it</div>
         {sent ? (
-          <p className="small muted">Done — it’s on its way.</p>
+          <p className="small muted">
+            Your mail app has it. Nothing was sent from here, and no address was taken.
+          </p>
         ) : (
           <>
-            <p className="small muted mb">Want your read emailed to you? Only if you ask.</p>
-            <input
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-              }}
-              aria-label="Email address"
-            />
+            <p className="small muted mb">
+              This opens your own mail app with your read already written. Send it to yourself, or
+              to nobody — it never leaves your phone unless you send it.
+            </p>
             <button
-              className="mt"
               style={{ width: '100%' }}
-              disabled={!email.includes('@')}
               onClick={() => {
-                send({ type: 'email-optin', email: email.trim() });
+                // MVP: no mail server, no address stored. The read is the
+                // player's, and a mailto hands it to them without this game
+                // ever holding a personal address it would then have to keep
+                // safe, honour a deletion request for, and actually send from.
+                location.href = readAsMailto(view);
                 setSent(true);
               }}
             >
-              Email me my read
+              Email it to myself
             </button>
           </>
         )}
