@@ -22,6 +22,12 @@ const PROLOGUE_VOLUME = 0.26;
 const FADE_MS = 1200;
 /** The last beat lands, then the score goes with it rather than being cut. */
 const PROLOGUE_OUT_MS = 3500;
+/**
+ * How long before the end of an in-game track to start taking it down. The
+ * tracks are not written to loop, so running one to its last sample and
+ * starting the next at full level is a seam the room hears every time.
+ */
+const TAIL_FADE_MS = 6000;
 
 export type MusicCue = 'menu' | 'prologue' | 'game' | null;
 
@@ -89,6 +95,7 @@ export function setDucked(owner: string, on: boolean): void {
 
 function load(): void {
   if (!el || cue === null) return;
+  tailing = false;
   const inGame = tracks.inGame ?? [];
   const src =
     cue === 'menu'
@@ -127,7 +134,24 @@ export function fadeOutPrologue(): void {
 function onEnded(): void {
   if (cue !== 'game') return;
   track += 1;
-  load();
+  tailing = false;
+  load(); // fades back up from zero
+}
+
+/** True once the current track has begun its run-out, so it starts only once. */
+let tailing = false;
+
+/**
+ * Take the track down over its closing seconds rather than letting it stop
+ * dead. Watched rather than scheduled, because a stream that stalls and
+ * resumes would leave a timer pointing at the wrong moment.
+ */
+function onTimeUpdate(): void {
+  if (cue !== 'game' || !el || tailing) return;
+  const left = el.duration - el.currentTime;
+  if (!Number.isFinite(left) || left > TAIL_FADE_MS / 1000) return;
+  tailing = true;
+  fadeTo(0, Math.max(400, left * 1000));
 }
 
 /**
@@ -162,6 +186,7 @@ export function setCue(next: MusicCue): void {
     el.hidden = true;
     document.body.appendChild(el);
     el.addEventListener('ended', onEnded);
+    el.addEventListener('timeupdate', onTimeUpdate);
     load();
     return;
   }
@@ -181,11 +206,13 @@ export function stopMusic(): void {
   fadeTimer = null;
   if (el) {
     el.removeEventListener('ended', onEnded);
+    el.removeEventListener('timeupdate', onTimeUpdate);
     el.pause();
     el.remove();
     el = null;
   }
   duckers.clear();
+  tailing = false;
   cue = null;
   track = 0;
 }

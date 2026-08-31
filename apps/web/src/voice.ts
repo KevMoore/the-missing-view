@@ -11,6 +11,7 @@
  */
 import { useEffect, useRef } from 'react';
 import { setDucked } from './music.js';
+import { speak, stopSpeaking } from './speaker.js';
 
 /** Autoplay is refused until the page has been gestured at; the stage-take covers us. */
 export function useSuspectVoices(
@@ -21,13 +22,11 @@ export function useSuspectVoices(
   const played = useRef(new Set<string>());
   const queue = useRef<string[]>([]);
   const speaking = useRef(false);
-  const audio = useRef<HTMLAudioElement | null>(null);
 
   // Muting the screen must silence a line already in flight, not just the score.
   useEffect(() => {
-    if (isMuted && audio.current) {
-      audio.current.pause();
-      audio.current = null;
+    if (isMuted) {
+      stopSpeaking();
       queue.current = [];
       speaking.current = false;
       setDucked('suspect-voice', false);
@@ -47,18 +46,14 @@ export function useSuspectVoices(
       const url = queue.current.shift();
       if (url === undefined) {
         speaking.current = false;
-        audio.current = null;
         setDucked('suspect-voice', false);
         return;
       }
       speaking.current = true;
       setDucked('suspect-voice', true);
-      const el = new Audio(url);
-      audio.current = el;
-      el.addEventListener('ended', next);
-      // A failed line must not strand the queue behind it.
-      el.addEventListener('error', next);
-      el.play().catch(next);
+      // Resolves on end, on failure, or immediately if audio was never
+      // unlocked — a line that cannot play must not strand the queue behind it.
+      void speak(url).then(next);
     };
 
     if (!speaking.current) next();
@@ -66,7 +61,7 @@ export function useSuspectVoices(
 
   useEffect(
     () => () => {
-      audio.current?.pause();
+      stopSpeaking();
       setDucked('suspect-voice', false);
     },
     [],

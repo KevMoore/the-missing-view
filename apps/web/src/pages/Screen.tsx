@@ -4,6 +4,7 @@ import QRCode from 'qrcode';
 import { remaining, useGameSocket, type ScreenView, type ServerMessage } from '../ws.js';
 import { useMusic, type MusicCue } from '../music.js';
 import { useSuspectVoices } from '../voice.js';
+import { armSpeechUnlock, unlockSpeech } from '../speaker.js';
 import { Backdrop } from './Backdrop.js';
 import { Prologue } from './Prologue.js';
 
@@ -15,6 +16,25 @@ import { Prologue } from './Prologue.js';
  */
 function latest<T>(items: readonly T[], count: number): T[] {
   return items.slice(-count).reverse();
+}
+
+/**
+ * A television has no scrollbar and nobody in the room can reach it, so a card
+ * cut off halfway is simply broken. An iPad in landscape has a couple of
+ * hundred pixels less than a 1080p screen, and this is where they come from.
+ */
+function useShortScreen(): boolean {
+  const [short, setShort] = useState(() => window.innerHeight < 900);
+  useEffect(() => {
+    const onResize = () => {
+      setShort(window.innerHeight < 900);
+    };
+    window.addEventListener('resize', onResize);
+    return () => {
+      window.removeEventListener('resize', onResize);
+    };
+  }, []);
+  return short;
 }
 
 /** Says out loud what the cap is hiding, so the board never looks smaller than it is. */
@@ -44,6 +64,10 @@ export function Screen() {
   const [codeInput, setCodeInput] = useState('');
   const [now, setNow] = useState(Date.now());
   const [muted, setMuted] = useState(() => sessionStorage.getItem('tmv-muted') === '1');
+  const short = useShortScreen();
+  const caps = short
+    ? { questions: 2, theories: 2, boardFull: 1, boardSlim: 4 }
+    : { questions: 3, theories: 3, boardFull: 2, boardSlim: 7 };
 
   // The menu theme carries the lobby; play drops it under the room's talking.
   const cue: MusicCue = !joined
@@ -76,6 +100,10 @@ export function Screen() {
       return roomCode ? { type: 'join', role: 'screen', roomCode } : null;
     },
   );
+
+  // A screen that reloaded mid-game resumed straight past the join click, so
+  // there was no gesture to unlock audio with. Take the next one instead.
+  useEffect(() => armSpeechUnlock(), []);
 
   useEffect(() => {
     const t = setInterval(() => {
@@ -119,6 +147,10 @@ export function Screen() {
             <form
               onSubmit={(e) => {
                 e.preventDefault();
+                // Synchronous, inside the gesture: iOS grants audio permission
+                // to the element it sees touched, not to the page. Everything
+                // spoken for the rest of the night reuses what this unlocks.
+                unlockSpeech();
                 const roomCode = codeInput.trim().toUpperCase();
                 sessionStorage.setItem('tmv-screen-room', roomCode);
                 send({ type: 'join', role: 'screen', roomCode });
@@ -228,7 +260,7 @@ export function Screen() {
           {view.questions.length === 0 && (
             <p className="muted small">Ask a suspect a question from your phone.</p>
           )}
-          {latest(view.questions, 3).map((q) => (
+          {latest(view.questions, caps.questions).map((q) => (
             <div className="qa fade-up" key={q.id}>
               <div className="q">
                 {q.byName} asks {q.suspectName}: “{q.text}”
@@ -240,14 +272,14 @@ export function Screen() {
               )}
             </div>
           ))}
-          <Earlier total={view.questions.length} shown={3} noun="question" />
+          <Earlier total={view.questions.length} shown={caps.questions} noun="question" />
         </section>
 
         <section>
           {view.theories.length > 0 && (
             <>
               <div className="deco-rule">Theories</div>
-              {latest(view.theories, 3).map((t) => (
+              {latest(view.theories, caps.theories).map((t) => (
                 <div className="card fade-up" key={t.id}>
                   <p>
                     “{t.text}” <span className="byline">— {t.byName}</span>
@@ -257,7 +289,12 @@ export function Screen() {
                   </div>
                 </div>
               ))}
-              <Earlier total={view.theories.length} shown={3} noun="theory" plural="theories" />
+              <Earlier
+                total={view.theories.length}
+                shown={caps.theories}
+                noun="theory"
+                plural="theories"
+              />
             </>
           )}
           <div className="deco-rule">The evidence board</div>
@@ -267,20 +304,24 @@ export function Screen() {
           {/* The two newest read in full; the rest stay on the board as titles, so the
               team's shared record is never lost to make room for the newest thing. */}
           <div className="board-list">
-            {latest(view.board, 2).map((c) => (
+            {latest(view.board, caps.boardFull).map((c) => (
               <div className="card fade-up" key={c.clueId}>
                 <h3>{c.title}</h3>
                 <p>{c.text}</p>
                 <div className="byline">tabled by {c.byName}</div>
               </div>
             ))}
-            {latest(view.board.slice(0, -2), 7).map((c) => (
+            {latest(view.board.slice(0, -caps.boardFull), caps.boardSlim).map((c) => (
               <div className="card-slim" key={c.clueId}>
                 <span className="grow">{c.title}</span>
                 <span className="byline">{c.byName}</span>
               </div>
             ))}
-            <Earlier total={view.board.length} shown={9} noun="clue" />
+            <Earlier
+              total={view.board.length}
+              shown={caps.boardFull + caps.boardSlim}
+              noun="clue"
+            />
           </div>
         </section>
       </div>

@@ -13,6 +13,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { fadeOutPrologue, setDucked } from '../music.js';
+import { speak, stopSpeaking } from '../speaker.js';
 
 export interface PrologueBeat {
   text: string;
@@ -46,7 +47,6 @@ export function Prologue({
   // A film that will not load or will not play drops us back to the paintings,
   // which is why they stay in the case pack even once a film exists.
   const [filmFailed, setFilmFailed] = useState(false);
-  const audio = useRef<HTMLAudioElement | null>(null);
   const beat = beats[index];
 
   // The screen re-renders every second for its clock, which hands us a fresh
@@ -59,8 +59,7 @@ export function Prologue({
     setDucked('prologue', true);
     return () => {
       setDucked('prologue', false);
-      audio.current?.pause();
-      audio.current = null;
+      stopSpeaking();
     };
   }, []);
 
@@ -82,28 +81,20 @@ export function Prologue({
       // Narrated: the line decides the length. The watchdog is long enough that
       // it can only ever rescue a stall, never truncate a reading.
       const timer = window.setTimeout(advance, NARRATED_WATCHDOG_MS);
-      const el = new Audio(beat.voiceUrl);
-      audio.current = el;
-      const onDone = () => {
+      const started = performance.now();
+      void speak(beat.voiceUrl).then(() => {
         window.clearTimeout(timer);
-        tail = window.setTimeout(advance, TAIL_MS);
-      };
-      el.addEventListener('ended', onDone);
-      // If it will not play at all, fall back to the written hold rather than
-      // sitting on one frame for the length of the watchdog.
-      const onBroken = () => {
-        window.clearTimeout(timer);
-        tail = window.setTimeout(advance, beat.holdMs ?? DEFAULT_HOLD_MS);
-      };
-      el.addEventListener('error', onBroken);
-      el.play().catch(onBroken);
+        // speak() resolves at once when audio is refused or absent. Holding for
+        // a beat that was never spoken would race the whole sequence past the
+        // room, so fall back to the written hold instead.
+        const spoke = performance.now() - started > 500;
+        tail = window.setTimeout(advance, spoke ? TAIL_MS : (beat.holdMs ?? DEFAULT_HOLD_MS));
+      });
       return () => {
         cancelled = true;
         window.clearTimeout(timer);
         if (tail !== undefined) window.clearTimeout(tail);
-        el.removeEventListener('ended', onDone);
-        el.removeEventListener('error', onBroken);
-        el.pause();
+        stopSpeaking();
       };
     }
 

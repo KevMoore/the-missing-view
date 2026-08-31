@@ -164,13 +164,20 @@ textarea:focus {
 }
 
 .suspect-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
-  gap: 1rem;
+  /* One row, always. A grid wrapped five suspects onto two rows on an iPad and
+     pushed the interrogation off the bottom of the screen — and the screen has
+     no scrollbar, so off the bottom means gone. Flex with a zero basis lets the
+     portraits shrink to whatever width there is instead. */
+  display: flex;
+  gap: 0.7rem;
+}
+.suspect-grid > * {
+  flex: 1 1 0;
+  min-width: 0;
 }
 .suspect {
   text-align: center;
-  padding: 1rem 0.5rem;
+  padding: 0.7rem 0.4rem;
   background: rgba(31, 26, 21, 0.82);
   border: 1px solid var(--panel-edge);
 }
@@ -185,7 +192,7 @@ textarea:focus {
   border: 1px solid var(--gold);
   outline: 1px solid var(--panel-edge);
   outline-offset: 3px;
-  margin: 0 auto 0.9rem;
+  margin: 0 auto 0.6rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -199,9 +206,35 @@ textarea:focus {
   color: var(--gold-bright);
 }
 .suspect .bio {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
+  line-height: 1.35;
   color: var(--cream-dim);
-  margin-top: 0.3rem;
+  margin-top: 0.25rem;
+  /* The full biography is on every player's phone. Here it is a reminder, and
+     a reminder that costs the room the interrogation panel is a bad trade. */
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Short screens — an iPad in landscape is 820px or less. Give the space back
+   to what changes during play rather than to what is fixed. */
+@media (max-height: 900px) {
+  .stage {
+    padding: 1rem 1.5rem;
+  }
+  .suspect .bio {
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+  }
+  .suspect .name {
+    font-size: 0.95rem;
+  }
+  .card p {
+    font-size: 0.9rem;
+  }
 }
 
 .timer {
