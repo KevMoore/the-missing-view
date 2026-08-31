@@ -5,6 +5,8 @@ import { remaining, useGameSocket, type ScreenView, type ServerMessage } from '.
 import { useMusic, type MusicCue } from '../music.js';
 import { useSuspectVoices } from '../voice.js';
 import { armSpeechUnlock, unlockSpeech } from '../speaker.js';
+import { play, setSfxMuted, setSfxSuppressed, unlockSfx } from '../sfx.js';
+import { useArrivals } from '../arrivals.js';
 import { Backdrop } from './Backdrop.js';
 import { Prologue } from './Prologue.js';
 
@@ -141,6 +143,42 @@ export function Screen() {
   );
   useSuspectVoices(exchanges, joined, muted);
 
+  // Nothing lands on top of a line: a clue arriving under a suspect's answer is
+  // worse than a clue arriving in silence.
+  useEffect(() => {
+    setSfxMuted(muted);
+  }, [muted]);
+  useEffect(() => {
+    setSfxSuppressed(exchanges.some((e) => e.askUrl !== undefined || e.voiceUrl !== undefined));
+  }, [exchanges]);
+
+  const boardSignatures = useMemo(
+    () => Object.fromEntries((view?.board ?? []).map((c) => [c.clueId, c.clueId])),
+    [view?.board],
+  );
+  const theorySignatures = useMemo(
+    () =>
+      Object.fromEntries(
+        (view?.theories ?? []).map((t) => [
+          t.id,
+          `${String(t.backers.length)}/${String(t.challengers.length)}`,
+        ]),
+      ),
+    [view?.theories],
+  );
+  const board = useArrivals(boardSignatures, view !== null, () => {
+    play('table');
+  });
+  const theories = useArrivals(theorySignatures, view !== null, (id, isNew) => {
+    if (isNew) {
+      play('theory');
+      return;
+    }
+    // Backed or challenged: which of the two moved decides the sound.
+    const t = (view?.theories ?? []).find((x) => x.id === id);
+    play((t?.challengers.length ?? 0) > 0 ? 'challenge' : 'back');
+  });
+
   const { send, connected } = useGameSocket(
     (msg: ServerMessage) => {
       if (msg.type === 'screen-view') setView(msg);
@@ -206,6 +244,7 @@ export function Screen() {
                 // to the element it sees touched, not to the page. Everything
                 // spoken for the rest of the night reuses what this unlocks.
                 unlockSpeech();
+                unlockSfx();
                 const roomCode = codeInput.trim().toUpperCase();
                 sessionStorage.setItem('tmv-screen-room', roomCode);
                 send({ type: 'join', role: 'screen', roomCode });
@@ -341,7 +380,12 @@ export function Screen() {
             <>
               <div className="deco-rule">Theories</div>
               {latest(view.theories, caps.theories).map((t) => (
-                <div className="card fade-up" key={t.id}>
+                <div
+                  className={`card fade-up${theories.arrived.has(t.id) ? ' just-in' : ''}${
+                    theories.changed.has(t.id) && !theories.arrived.has(t.id) ? ' just-moved' : ''
+                  }`}
+                  key={t.id}
+                >
                   <p>“{t.text}”</p>
                   <div className="byline">
                     <Who player={cast.get(t.by)} prefix="— " trailing />
@@ -367,7 +411,10 @@ export function Screen() {
               team's shared record is never lost to make room for the newest thing. */}
           <div className="board-list">
             {latest(view.board, caps.boardFull).map((c) => (
-              <div className="card fade-up" key={c.clueId}>
+              <div
+                className={`card fade-up${board.arrived.has(c.clueId) ? ' just-in' : ''}`}
+                key={c.clueId}
+              >
                 <h3>{c.title}</h3>
                 <p>{c.text}</p>
                 <div className="byline">
@@ -376,7 +423,10 @@ export function Screen() {
               </div>
             ))}
             {latest(view.board.slice(0, -caps.boardFull), caps.boardSlim).map((c) => (
-              <div className="card-slim" key={c.clueId}>
+              <div
+                className={`card-slim${board.arrived.has(c.clueId) ? ' just-in' : ''}`}
+                key={c.clueId}
+              >
                 <span className="grow">{c.title}</span>
                 <span className="byline">
                   <Who player={cast.get(c.by)} trailing />

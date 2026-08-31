@@ -143,7 +143,8 @@ export interface Suspect {
   /**
    * Which synthesised voice speaks this character aloud on the big screen. An
    * OpenAI speech voice — 'alloy', 'ash', 'ballad', 'coral', 'echo', 'fable',
-   * 'onyx', 'nova', 'sage', 'shimmer'. Omit for a silent character.
+   * 'onyx', 'nova', 'sage', 'shimmer', 'verse', 'marin', 'cedar'. The last
+   * three are the newest and the most natural. Omit for a silent character.
    */
   voice?: string;
   /**

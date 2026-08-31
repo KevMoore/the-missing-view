@@ -954,3 +954,81 @@ a:hover {
   width: 1.5em;
   height: 1.5em;
 }
+
+/* ---- something just happened ---- */
+
+/*
+ * A card arriving on a board of a dozen others has to announce itself, and the
+ * screen is across the room. The gold edge is the same gold as everything else,
+ * so it reads as the thing lighting up rather than as a new colour appearing.
+ */
+@keyframes just-in {
+  0% {
+    border-left-color: var(--gold-bright);
+    box-shadow:
+      inset 3px 0 14px -6px var(--gold-bright),
+      0 0 0 1px rgba(232, 201, 135, 0.35);
+    transform: translateY(0.4rem);
+    opacity: 0.5;
+  }
+  35% {
+    transform: none;
+    opacity: 1;
+  }
+  100% {
+    border-left-color: var(--gold);
+    box-shadow: none;
+    transform: none;
+    opacity: 1;
+  }
+}
+.card.just-in,
+.card-slim.just-in {
+  animation: just-in 1500ms ease-out;
+}
+
+/* Backed or challenged: the card is already there, so only the light moves. */
+@keyframes just-moved {
+  0% {
+    box-shadow: 0 0 0 1px rgba(232, 201, 135, 0.4);
+  }
+  100% {
+    box-shadow: none;
+  }
+}
+.card.just-moved {
+  animation: just-moved 1200ms ease-out;
+}
+.card.just-moved .byline,
+.card.just-in .byline {
+  animation: byline-lift 1200ms ease-out;
+}
+@keyframes byline-lift {
+  0% {
+    color: var(--gold-bright);
+  }
+  100% {
+    color: var(--cream-dim);
+  }
+}
+
+/* A room that asked for less movement gets the light and not the motion. */
+@media (prefers-reduced-motion: reduce) {
+  .card.just-in,
+  .card-slim.just-in,
+  .card.just-moved {
+    animation-duration: 600ms;
+  }
+  @keyframes just-in {
+    0% {
+      border-left-color: var(--gold-bright);
+      opacity: 1;
+      transform: none;
+    }
+    100% {
+      border-left-color: var(--gold);
+      opacity: 1;
+      transform: none;
+    }
+  }
+}

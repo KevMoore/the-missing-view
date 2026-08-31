@@ -336,7 +336,7 @@ export const blackwoodHall: CasePack = {
    * room, the billiard room and the servants' passage appear nowhere else.
    */
   prologue: {
-    voice: 'fable',
+    voice: 'marin',
     voiceDirection:
       'An elderly Englishman of seventy-five. This is the single most important thing: he is ' +
       'OLD and he is BRITISH, and both must be audible in the first three words. ' +

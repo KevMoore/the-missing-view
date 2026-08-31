@@ -72,7 +72,7 @@ export async function draftCase(opts: DraftOptions): Promise<DraftResult> {
       'Every voiceDirection must OPEN by naming the accent explicitly — the speech model reads ' +
         'American English unless told otherwise, and a manner is not an accent. Use accents of ' +
         'these islands unless the brief plainly calls for otherwise.',
-      'Assign each suspect a different voice id from: alloy, ash, ballad, coral, echo, fable, onyx, nova, sage, shimmer.',
+      'Assign each suspect a different voice id from: alloy, ash, ballad, coral, echo, fable, onyx, nova, sage, shimmer, verse, marin, cedar.',
     ].join('\n'),
   })) as unknown as CastDraft;
 
