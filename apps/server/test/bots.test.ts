@@ -51,7 +51,7 @@ describe('AI players', () => {
     const { room } = await seated(12);
     const { state } = room.snapshot();
     expect(state?.accusation).toBeUndefined();
-    expect((state?.log ?? []).some((e) => e.move.type === 'accuse')).toBe(false);
+    expect((state?.log ?? []).some((e) => e.move.type === 'accuse-commit')).toBe(false);
     room.stopBots();
   });
 

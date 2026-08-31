@@ -96,10 +96,12 @@ const server = createServer((req, res) => {
 
     // A suspect's reply, spoken. Held in memory by the room that made it, so it
     // dies with the game and never reaches disk.
-    const voice = /^\/voice\/([0-9A-F]{6})\/([\w-]+)\.mp3$/.exec(req.url ?? '');
+    // The key may carry a house segment (`h1/ask-q-3`); narration, which the
+    // whole room shares, has none. A Map lookup, not a file path.
+    const voice = /^\/voice\/([0-9A-F]{6})\/((?:[\w-]+\/)?[\w-]+)\.mp3$/.exec(req.url ?? '');
     if (voice) {
-      const [, roomCode = '', questionId = ''] = voice;
-      const audio = rooms.get(roomCode)?.voice(questionId);
+      const [, roomCode = '', key = ''] = voice;
+      const audio = rooms.get(roomCode)?.voice(key);
       if (!audio) {
         res.writeHead(404);
         res.end();
@@ -211,7 +213,10 @@ wss.on('connection', (socket: WebSocket) => {
           case 'create-room': {
             const pack = cases.get(msg.caseId);
             if (!pack) throw new IllegalMove(`unknown case ${msg.caseId}`);
-            room = new Room(pack, { tickMs: BOT_TICK_MS });
+            room = new Room(pack, {
+              tickMs: BOT_TICK_MS,
+              ...(msg.mode ? { mode: msg.mode } : {}),
+            });
             rooms.set(room.code, room);
             socketRooms.set(socket, room.code);
             client = { role: 'console', send };
@@ -230,7 +235,11 @@ wss.on('connection', (socket: WebSocket) => {
               client = { role: 'phone', playerId, send };
               send({ type: 'joined', playerId, roomCode: room.code });
             } else {
-              client = { role: msg.role, send };
+              client = {
+                role: msg.role,
+                ...(msg.houseId !== undefined ? { houseId: msg.houseId } : {}),
+                send,
+              };
             }
             room.addClient(client);
             return;
@@ -254,12 +263,15 @@ wss.on('connection', (socket: WebSocket) => {
             if (!room || client?.role !== 'console') throw new IllegalMove('facilitator only');
             await room.facilitate(msg.action);
             if (msg.action === 'trigger-reveal' || msg.action === 'next-act') {
-              const snap = room.snapshot();
-              if (snap.state?.phase === 'reveal') {
+              // One row per house. Two houses played the same case and are only
+              // worth comparing if both were kept.
+              const caseId = room.snapshot().caseId;
+              for (const house of room.snapshots()) {
+                if (house.state.phase !== 'reveal') continue;
                 await saveFinishedGame(
-                  room.code,
-                  snap.caseId,
-                  snap.state,
+                  room.snapshots().length > 1 ? `${room.code}-${house.houseId}` : room.code,
+                  caseId,
+                  house.state,
                   room.emailOptIns,
                   room.metrics() ?? {},
                 );
@@ -291,8 +303,30 @@ wss.on('connection', (socket: WebSocket) => {
           }
           case 'add-bot': {
             if (!room || client?.role !== 'console') throw new IllegalMove('facilitator only');
-            room.addBot();
+            room.addBot(msg.houseId);
             room.pushViews();
+            return;
+          }
+          case 'excuse': {
+            if (!room || client?.role !== 'console') throw new IllegalMove('facilitator only');
+            room.excuse(msg.playerId, msg.excused);
+            return;
+          }
+          case 'assign': {
+            if (!room || client?.role !== 'console') throw new IllegalMove('facilitator only');
+            room.assign(msg.playerId, msg.houseId, msg.characterId);
+            return;
+          }
+          case 'name-house': {
+            if (!room || client?.role !== 'console') throw new IllegalMove('facilitator only');
+            room.nameHouse(msg.houseId, msg.name);
+            return;
+          }
+          case 'watch-house': {
+            if (!room || client?.role !== 'screen') throw new IllegalMove('screens only');
+            if (msg.houseId === undefined) delete client.houseId;
+            else client.houseId = msg.houseId;
+            client.send(room.screenView(client.houseId));
             return;
           }
           case 'email-optin': {

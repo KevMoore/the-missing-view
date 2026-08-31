@@ -3,8 +3,10 @@ import { useEffect, useState } from 'react';
 import {
   remaining,
   useGameSocket,
+  type ClientMessage,
   type CaseList,
   type ConsoleView,
+  type SessionMode,
   type ServerMessage,
 } from '../ws.js';
 
@@ -24,6 +26,10 @@ export function Console() {
    */
   const [remote, setRemote] = useState(() => localStorage.getItem('tmv-remote') === '1');
   const [copied, setCopied] = useState(false);
+  /** One house, or two playing the same case head to head (D38). */
+  const [mode, setMode] = useState<SessionMode>('one-house');
+  /** The player the facilitator is casting. Null while they pick one. */
+  const [casting, setCasting] = useState<string | null>(null);
 
   const { send, connected } = useGameSocket(
     (msg: ServerMessage) => {
@@ -98,6 +104,38 @@ export function Console() {
                 : 'Death at Blackwood Hall — 4 to 8 players, three acts, about an hour.'}
             </p>
           )}
+          <div className="deco-rule mt">How are they playing?</div>
+          {/* Two houses is a different game, not a setting: it needs twice the
+              people and the teams have to be decided before anybody is dealt in.
+              Asking here, once, is the only place it can be asked. */}
+          {(
+            [
+              [
+                'one-house',
+                'One house',
+                'Four to eight players, one investigation, one accusation they all have to agree on.',
+              ],
+              [
+                'two-houses',
+                'Two houses, head to head',
+                'Eight to sixteen. You split them into two teams; each gets the same case and never sees the other’s board. Compared at the end.',
+              ],
+            ] as const
+          ).map(([value, label, blurb]) => (
+            <button
+              key={value}
+              className={mode === value ? 'mb' : 'ghost mb'}
+              style={{ width: '100%', textAlign: 'left' }}
+              onClick={() => {
+                setMode(value);
+              }}
+            >
+              {label}
+              <span className="muted small" style={{ display: 'block', lineHeight: 1.5 }}>
+                {blurb}
+              </span>
+            </button>
+          ))}
           <p className="muted small mb" style={{ lineHeight: 1.7 }}>
             You need a big screen in the room — a TV, a projector, a laptop on the table — and one
             phone per player. This page is yours alone: you run the game, you do not play it.
@@ -106,7 +144,7 @@ export function Console() {
             style={{ width: '100%' }}
             disabled={!connected || (cases.length > 1 && !chosen)}
             onClick={() => {
-              send({ type: 'create-room', caseId: chosen || 'blackwood-hall' });
+              send({ type: 'create-room', caseId: chosen || 'blackwood-hall', mode });
             }}
           >
             Open the house
@@ -167,7 +205,13 @@ export function Console() {
           <div className={`setup-step${view?.screenConnected ? ' done' : ''}`}>
             <span className="num">{view?.screenConnected ? '✓' : '1'}</span>
             <span className="what">
-              <strong>{remote ? 'Open the screen and share it.' : 'Open the big screen.'}</strong>
+              <strong>
+                {view?.mode === 'two-houses'
+                  ? 'Open a big screen for each house.'
+                  : remote
+                    ? 'Open the screen and share it.'
+                    : 'Open the big screen.'}
+              </strong>
               <span className="muted small" style={{ display: 'block', lineHeight: 1.7 }}>
                 {view?.screenConnected
                   ? remote
@@ -182,15 +226,41 @@ export function Console() {
                     ? ' in a second tab, then share that tab in your call with sound on.'
                     : ' — the art, the music, the room code and the QR code all live there.')}
               </span>
-              {!view?.screenConnected && (
-                <button
-                  className="ghost mt"
-                  onClick={() => {
-                    window.open(screenUrl, '_blank', 'noopener');
-                  }}
-                >
-                  Open the big screen ↗
-                </button>
+              {/* Two houses need two displays, out of each other's sight. One
+                  screen showing both boards would hand each team the other's
+                  evidence, which is the whole thing the head-to-head is for. */}
+              {view?.mode === 'two-houses' ? (
+                <>
+                  <span className="muted small" style={{ display: 'block', lineHeight: 1.7 }}>
+                    One each, on separate displays, where neither team can read the other’s. Each
+                    screen shows only its own house’s board — but a team can still read a screen
+                    they can see.
+                  </span>
+                  <div className="row mt" style={{ gap: '0.5rem', flexWrap: 'wrap' }}>
+                    {view.houses.map((h) => (
+                      <button
+                        key={h.id}
+                        className="ghost"
+                        onClick={() => {
+                          window.open(`${screenUrl}&house=${h.id}`, '_blank', 'noopener');
+                        }}
+                      >
+                        Open {h.name}’s screen ↗
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                !view?.screenConnected && (
+                  <button
+                    className="ghost mt"
+                    onClick={() => {
+                      window.open(screenUrl, '_blank', 'noopener');
+                    }}
+                  >
+                    Open the big screen ↗
+                  </button>
+                )
               )}
             </span>
           </div>
@@ -233,8 +303,28 @@ export function Console() {
             </span>
           </div>
 
+          {view && (
+            <div className={`setup-step${allCast(view) ? ' done' : ''}`}>
+              <span className="num">{allCast(view) ? '✓' : '3'}</span>
+              <span className="what">
+                <strong>
+                  {view.mode === 'two-houses'
+                    ? 'Split them into two houses, and cast them.'
+                    : 'Cast them.'}
+                </strong>
+                <span className="muted small" style={{ display: 'block', lineHeight: 1.7 }}>
+                  You know these people and the game is about how they work together, so put the
+                  character on the person on purpose. Anybody you leave alone is cast at random from
+                  what is left — and the brief under each name tells you who they are, so a quiet
+                  person gets a part that suits them and nobody is asked to play the wrong sex.
+                </span>
+                <Casting view={view} casting={casting} setCasting={setCasting} send={send} />
+              </span>
+            </div>
+          )}
+
           <div className="setup-step">
-            <span className="num">3</span>
+            <span className="num">4</span>
             <span className="what">
               <strong>Start Act 1.</strong>
               <span className="muted small" style={{ display: 'block', lineHeight: 1.7 }}>
@@ -259,12 +349,14 @@ export function Console() {
         <div className="row" style={{ flexWrap: 'wrap', gap: '0.6rem' }}>
           {phase === 'lobby' && (
             <button
-              disabled={(view?.players.length ?? 0) < 4}
+              disabled={!view?.houses.every((h) => h.ready)}
               onClick={() => {
                 send({ type: 'facilitator', action: 'start' });
               }}
             >
-              Start Act 1 ({String(view?.players.length ?? 0)} joined, need 4+)
+              {view?.mode === 'two-houses'
+                ? `Start Act 1 (${view.houses.map((h) => `${h.name} ${String(h.playerCount)}`).join(' · ')}, need 4+ each)`
+                : `Start Act 1 (${String(view?.players.length ?? 0)} joined, need 4+)`}
             </button>
           )}
           {phase === 'lobby' && view?.hasPrologue === true && (
@@ -286,11 +378,11 @@ export function Console() {
           {phase === 'lobby' && (
             <button
               className="ghost"
-              disabled={(view?.players.length ?? 0) >= 8}
+              disabled={(view?.players.length ?? 0) >= (view?.mode === 'two-houses' ? 16 : 8)}
               onClick={() => {
                 send({ type: 'add-bot' });
               }}
-              title="Seats an AI player. They are dealt a character and play it."
+              title="Seats an AI player in whichever house needs one. They are dealt a character and play it."
             >
               Add an AI player
             </button>
@@ -339,27 +431,86 @@ export function Console() {
         </p>
       </div>
 
-      <div className="deco-frame mb">
-        <div className="deco-rule">The room</div>
-        {(view?.players ?? []).map((p) => (
-          <div
-            className="row"
-            key={p.id}
-            style={{ padding: '0.35rem 0', borderBottom: '1px solid var(--panel-edge)' }}
-          >
-            <span className="grow">
-              {p.bot ? '🤖' : p.connected ? '🟢' : '⚪️'} {p.name}
-              {p.bot && <span className="muted small"> · AI</span>}
-            </span>
-            <span className="muted small">{String(p.moveCount)} moves</span>
+      {/* Not in the lobby: the casting table above is the roster there, and
+          showing every name twice on one page made the setup harder to read
+          rather than easier. This panel is the in-play monitor. */}
+      {phase !== 'lobby' && (
+        <div className="deco-frame mb">
+          <div className="deco-rule">The room</div>
+          {(view?.players ?? []).map((p) => (
+            <div
+              className="row"
+              key={p.id}
+              style={{ padding: '0.35rem 0', borderBottom: '1px solid var(--panel-edge)' }}
+            >
+              <span className="grow">
+                {p.bot ? '🤖' : p.connected ? '🟢' : '⚪️'} {p.name}
+                {p.characterName !== undefined && (
+                  <span className="muted small"> · {p.characterName}</span>
+                )}
+                {p.bot && <span className="muted small"> · AI</span>}
+                {p.excused === true && <span className="muted small"> · stood down</span>}
+              </span>
+              {/* The accusation waits for everybody (D36), so one dead phone in
+                  act 3 stops a house that has already agreed out loud. Offered
+                  only for somebody the server can see has gone: a person who is
+                  here and disagreeing has a live socket, and talking over them
+                  is the thing the mechanic exists to prevent. */}
+              {!p.bot && !p.connected && phase !== 'reveal' && !view?.accusationMade && (
+                <button
+                  className="ghost small-btn"
+                  title={`${p.name}’s phone has gone. The house can accuse without them.`}
+                  onClick={() => {
+                    send({ type: 'excuse', playerId: p.id, excused: p.excused !== true });
+                  }}
+                >
+                  {p.excused === true ? 'Wait for them again' : 'Accuse without them'}
+                </button>
+              )}
+              {view?.mode === 'two-houses' && (
+                <span className="muted small">
+                  {view.houses.find((h) => h.id === p.houseId)?.name ?? '—'}
+                </span>
+              )}
+              <span className="muted small">{String(p.moveCount)} moves</span>
+            </div>
+          ))}
+          <p className="muted small mt">
+            {String(view?.boardCount ?? 0)} clues tabled · {String(view?.questionCount ?? 0)}{' '}
+            questions asked
+            {view?.accusationMade ? ' · accusation made' : ''}
+          </p>
+        </div>
+      )}
+
+      {view?.comparison && (
+        <div className="deco-frame mb fade-up">
+          <div className="deco-rule">Head to head</div>
+          <div className="split">
+            {view.comparison.map((h) => (
+              <Stat
+                key={h.id}
+                label={h.name}
+                value={h.solved ? 'Solved' : (h.culpritId ?? 'no accusation')}
+              />
+            ))}
           </div>
-        ))}
-        <p className="muted small mt">
-          {String(view?.boardCount ?? 0)} clues tabled · {String(view?.questionCount ?? 0)}{' '}
-          questions asked
-          {view?.accusationMade ? ' · accusation made' : ''}
-        </p>
-      </div>
+          <p className="muted small mt" style={{ lineHeight: 1.6 }}>
+            Two teams, the same case, the same suspects, different hands. What is worth talking
+            about is not who won — it is what each of them did differently with the same evidence,
+            and which of the two behaviours below they recognise in themselves.
+          </p>
+          {view.comparison.map((h) => (
+            <p className="small" key={h.id}>
+              <strong>{h.name}</strong>{' '}
+              <span className="muted">
+                {h.minutes} min · {h.cluesTabled} clues tabled · {h.theoriesProposed} theories ·{' '}
+                {h.questionsAsked} questions
+              </span>
+            </p>
+          ))}
+        </div>
+      )}
 
       {view?.teamReveal && (
         <div className="deco-frame fade-up">
@@ -468,6 +619,147 @@ function Stat({ label, value }: { label: string; value: string }) {
     <div className="stat">
       <div className="stat-value">{value}</div>
       <div className="stat-label">{label}</div>
+    </div>
+  );
+}
+
+/** True once every seat has a house that can play and a character on it. */
+function allCast(view: ConsoleView): boolean {
+  return (
+    view.houses.every((h) => h.ready) && view.players.every((p) => p.characterId !== undefined)
+  );
+}
+
+/**
+ * The casting table (D37, D38).
+ *
+ * Two lists and one rule: pick a person, then pick a face. The alternative was
+ * a dropdown per player, which hides exactly the thing the facilitator needs to
+ * see — who is still uncast, who is doubled up, and what each part actually is.
+ * Here the whole cast is on screen at once with its briefs, and a character
+ * already taken says so on its own card.
+ *
+ * Nothing here is compulsory. A facilitator who wants to just start can: every
+ * empty seat is cast from what is left when the game is dealt.
+ */
+function Casting({
+  view,
+  casting,
+  setCasting,
+  send,
+}: {
+  view: ConsoleView;
+  casting: string | null;
+  setCasting: (id: string | null) => void;
+  send: (msg: ClientMessage) => void;
+}) {
+  const selected = view.players.find((p) => p.id === casting);
+  if (view.players.length === 0) return <p className="muted small mt">Nobody has joined yet.</p>;
+
+  return (
+    <div className="casting mt">
+      {view.mode === 'two-houses' && (
+        <div className="houses-row mb">
+          {view.houses.map((h) => (
+            <div className={`house-card${h.ready ? ' ready' : ''}`} key={h.id}>
+              <input
+                className="house-name"
+                value={h.name}
+                aria-label={`Name for ${h.name}`}
+                maxLength={24}
+                onChange={(e) => {
+                  send({ type: 'name-house', houseId: h.id, name: e.target.value });
+                }}
+              />
+              <span className="muted small">
+                {h.playerCount} {h.playerCount === 1 ? 'player' : 'players'}
+                {h.ready ? '' : ' · needs 4'}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="cast-seats">
+        {view.players.map((p) => (
+          <button
+            key={p.id}
+            className={`seat${casting === p.id ? ' picked' : ''}${p.characterId === undefined ? ' bare' : ''}`}
+            onClick={() => {
+              setCasting(casting === p.id ? null : p.id);
+            }}
+          >
+            <strong>
+              <span aria-hidden>{p.bot ? '🤖' : p.connected ? '🟢' : '⚪️'}</span> {p.name}
+            </strong>
+            <span className="muted small">{p.characterName ?? 'not cast'}</span>
+            {view.mode === 'two-houses' && (
+              <span className="seat-house">
+                {view.houses.find((h) => h.id === p.houseId)?.name ?? '—'}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {selected && view.mode === 'two-houses' && (
+        <div className="row mt" style={{ gap: '0.5rem', flexWrap: 'wrap' }}>
+          <span className="muted small">Put {selected.name} in</span>
+          {view.houses.map((h) => (
+            <button
+              key={h.id}
+              className={selected.houseId === h.id ? '' : 'ghost'}
+              onClick={() => {
+                send({ type: 'assign', playerId: selected.id, houseId: h.id });
+              }}
+            >
+              {h.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {selected && view.characters && (
+        <>
+          <div className="deco-rule mt">
+            {selected.characterName === undefined
+              ? `Who is ${selected.name}?`
+              : `${selected.name} is ${selected.characterName}`}
+          </div>
+          <div className="cast-grid">
+            {view.characters.map((c) => {
+              const mine = selected.characterId === c.id;
+              const gone = c.takenBy !== undefined && !mine;
+              return (
+                <button
+                  key={c.id}
+                  className={`cast-card${mine ? ' mine' : ''}${gone ? ' gone' : ''}`}
+                  disabled={gone}
+                  title={c.voiceDirection ?? c.role}
+                  onClick={() => {
+                    send({
+                      type: 'assign',
+                      playerId: selected.id,
+                      characterId: mine ? '' : c.id,
+                    });
+                  }}
+                >
+                  {c.portraitAsset !== undefined && <img src={c.portraitAsset} alt="" />}
+                  <span className="cast-name">{c.name}</span>
+                  <span className="muted small">{c.role}</span>
+                  {/* The vocal direction is the one field that states sex and
+                      age plainly, which is what stops a mismatch between the
+                      player and the voice their questions are read in. */}
+                  {c.voiceDirection !== undefined && (
+                    <span className="cast-brief">{c.voiceDirection}</span>
+                  )}
+                  {gone && <span className="cast-taken">{c.takenBy}</span>}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
     </div>
   );
 }

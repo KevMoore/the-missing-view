@@ -63,9 +63,9 @@ export function ActBreak({ view, onDone }: { view: ScreenView; onDone: () => voi
     };
   }, [view.actOpeningUrl, view.act]);
 
-  const leadingTheory = [...view.theories].sort(
-    (a, b) => b.backers.length - a.backers.length || b.at - a.at,
-  )[0];
+  const houses = view.houses ?? [];
+  const strongest = (theories: typeof view.theories) =>
+    [...theories].sort((a, b) => b.backers.length - a.backers.length || b.at - a.at)[0];
 
   return (
     <div className="act-break">
@@ -74,32 +74,49 @@ export function ActBreak({ view, onDone }: { view: ScreenView; onDone: () => voi
         <h1 className="title act-break-title">{view.actTitle}</h1>
         {view.actOpening !== undefined && <p className="act-break-opening">{view.actOpening}</p>}
 
-        <div className="act-break-state">
-          {view.lastDecision && (
-            <p>
-              <span className="muted">You decided: </span>
-              {view.lastDecision.choice}
-              <span className="muted small">
-                {' '}
-                — {view.lastDecision.votes} of {view.lastDecision.of}
-              </span>
+        {/* One recap per house. With two of them, a single "your strongest
+            theory" would be one team's, read out to both — and the other team
+            would be told the state of a game it is not playing. */}
+        <div className={houses.length > 1 ? 'act-break-state split-state' : 'act-break-state'}>
+          {houses.map((house) => {
+            const leadingTheory = strongest(house.theories);
+            return (
+              <div key={house.id}>
+                {houses.length > 1 && <p className="act-break-house">{house.name}</p>}
+                {view.lastDecision && (
+                  <p>
+                    <span className="muted">You decided: </span>
+                    {view.lastDecision.choice}
+                    <span className="muted small">
+                      {' '}
+                      — {view.lastDecision.votes} of {view.lastDecision.of}
+                    </span>
+                  </p>
+                )}
+                {leadingTheory && (
+                  <p>
+                    <span className="muted">Your strongest theory: </span>“{leadingTheory.text}”
+                    <span className="muted small">
+                      {' '}
+                      — backed by {leadingTheory.backers.length}, challenged by{' '}
+                      {leadingTheory.challengers.length}
+                    </span>
+                  </p>
+                )}
+                <p className="muted">
+                  {house.board.length} {house.board.length === 1 ? 'clue is' : 'clues are'} on the
+                  board.
+                </p>
+              </div>
+            );
+          })}
+          {view.questions.length > 0 && (
+            <p className="muted">
+              {view.questions.length}{' '}
+              {view.questions.length === 1 ? 'question has' : 'questions have'} been put to the
+              suspects.
             </p>
           )}
-          {leadingTheory && (
-            <p>
-              <span className="muted">Your strongest theory: </span>“{leadingTheory.text}”
-              <span className="muted small">
-                {' '}
-                — backed by {leadingTheory.backers.length}, challenged by{' '}
-                {leadingTheory.challengers.length}
-              </span>
-            </p>
-          )}
-          <p className="muted">
-            {view.board.length} {view.board.length === 1 ? 'clue is' : 'clues are'} on the board.
-            {view.questions.length > 0 &&
-              ` ${String(view.questions.length)} ${view.questions.length === 1 ? 'question has' : 'questions have'} been put to the house.`}
-          </p>
         </div>
 
         <div className="act-break-count" aria-hidden>

@@ -5,6 +5,8 @@
  */
 import type {
   Accusation,
+  HouseResult,
+  SessionMode,
   Move,
   Music,
   Phase,
@@ -13,14 +15,34 @@ import type {
   Theory,
 } from '@tmv/core';
 
-export type { Music } from '@tmv/core';
+export type { Music, SessionMode, HouseResult } from '@tmv/core';
 
 // ---- client -> server ----
 
 export type ClientMessage =
   | { type: 'join'; role: 'phone'; roomCode: string; name: string; playerId?: string }
-  | { type: 'join'; role: 'screen' | 'console'; roomCode: string }
-  | { type: 'create-room'; caseId: string }
+  /**
+   * A screen may belong to one house. With two houses playing head to head,
+   * one screen showing both boards hands each team the other's work — the
+   * server keeps them apart and then the display puts them back together (D40).
+   */
+  | { type: 'join'; role: 'screen' | 'console'; roomCode: string; houseId?: string }
+  /** Point an already-connected screen at a house, or at both. */
+  | { type: 'watch-house'; houseId?: string }
+  | {
+      type: 'create-room';
+      caseId: string;
+      /** One house, or two playing head to head (D38). Defaults to one. */
+      mode?: SessionMode;
+    }
+  /**
+   * The facilitator putting a person in a house, or in a character, or both.
+   * Only legal in the lobby: both are dealt in at 'start' and cannot move
+   * afterwards without reshuffling somebody's hand.
+   */
+  | { type: 'assign'; playerId: string; houseId?: string; characterId?: string }
+  /** Name a house after the real team, which is the point of playing two. */
+  | { type: 'name-house'; houseId: string; name: string }
   | { type: 'move'; move: Move }
   | { type: 'facilitator'; action: 'start' | 'open-commitment' | 'next-act' | 'trigger-reveal' }
   | { type: 'prologue'; playing: boolean }
@@ -40,7 +62,12 @@ export type ClientMessage =
       /** "What will you do differently in your next team meeting?" — optional. */
       willChange?: string;
     }
-  | { type: 'add-bot' }
+  | { type: 'add-bot'; houseId?: string }
+  /**
+   * Let the house accuse without a player whose phone has gone, or start
+   * waiting for them again (D41). Refused while they are still connected.
+   */
+  | { type: 'excuse'; playerId: string; excused: boolean }
   | { type: 'email-optin'; email: string };
 
 // ---- server -> client views ----
@@ -56,6 +83,11 @@ export interface PublicSuspect {
 export interface ScreenView {
   type: 'screen-view';
   roomCode: string;
+  mode: SessionMode;
+  /** Every house in the session, names only — enough to offer the choice. */
+  houseChoices?: { id: string; name: string }[];
+  /** Which house this screen is showing. Absent means all of them. */
+  watching?: string;
   phase: Phase;
   act: 1 | 2 | 3;
   actStartedAt?: number;
@@ -76,9 +108,29 @@ export interface ScreenView {
   suspects: PublicSuspect[];
   board: (TabledClue & { title: string; text: string; byName: string; imageAsset?: string })[];
   theories: (Theory & { byName: string })[];
+  /**
+   * One block per house. In one-house play there is exactly one and the screen
+   * ignores it, rendering the flat fields above; with two houses the screen
+   * puts them side by side under a shared suspect rail (D38).
+   */
+  houses?: {
+    id: string;
+    name: string;
+    players: { id: string; name: string; characterName: string; portraitAsset?: string }[];
+    board: (TabledClue & { title: string; text: string; byName: string; imageAsset?: string })[];
+    theories: (Theory & { byName: string })[];
+    /** How close this house is to accusing. Names, never the name they chose:
+     *  a house watching the other one converge would just copy it. */
+    committed?: { of: number; count: number };
+    accusation?: Accusation & { culpritName: string };
+  }[];
+  /** Set only with two houses, once both have finished. */
+  comparison?: HouseResult[];
   questions: (SuspectQuestion & {
     byName: string;
     suspectName: string;
+    /** Which house asked. Absent in one-house play. */
+    houseName?: string;
     /** The question, in the asker's own character voice. Plays before the reply. */
     askUrl?: string;
     /** Where to fetch this reply spoken aloud. Absent until the audio exists. */
@@ -132,6 +184,27 @@ export interface PhoneView {
     options: { id: string; label: string }[];
     myChoice?: string;
   };
+  /** The house this player is in. Absent in one-house play. */
+  houseName?: string;
+  /**
+   * The house's accusation, as it forms. Everyone sees who has committed and to
+   * whom — an accusation nobody can see coming is not a team decision (D36) —
+   * and it locks the moment they all agree.
+   */
+  accusation?: {
+    myChoice?: string;
+    /** Every player who can decide, and what they have committed to. */
+    votes: {
+      playerId: string;
+      name: string;
+      culpritId?: string;
+      culpritName?: string;
+      /** The house is accusing without them: their phone has gone (D41). */
+      excused?: boolean;
+    }[];
+    motive: string;
+    locked?: { culpritName: string };
+  };
   canAccuse: boolean;
   /** Shown only to the player still holding the clue the house is missing. */
   nudge?: string;
@@ -145,7 +218,38 @@ export interface ConsoleView {
   act: 1 | 2 | 3;
   actStartedAt?: number;
   actMinutes: number;
-  players: { id: string; name: string; connected: boolean; moveCount: number; bot: boolean }[];
+  mode: SessionMode;
+  players: {
+    id: string;
+    name: string;
+    connected: boolean;
+    moveCount: number;
+    bot: boolean;
+    /** Where the facilitator has put them. Absent until they are assigned. */
+    houseId?: string;
+    /** True while the house is accusing without them (D41). */
+    excused?: boolean;
+    characterId?: string;
+    characterName?: string;
+  }[];
+  houses: { id: string; name: string; playerCount: number; ready: boolean }[];
+  /**
+   * The cast to choose from, with enough of each persona for the facilitator to
+   * match a character to a person (D37). Sent in the lobby only.
+   */
+  characters?: {
+    id: string;
+    name: string;
+    role: string;
+    lean: string;
+    /** States the character's sex and age plainly, which is what stops a
+     *  mismatch between the player and the voice their questions are read in. */
+    voiceDirection?: string;
+    portraitAsset?: string;
+    takenBy?: string;
+  }[];
+  /** Set with two houses, once both have finished. */
+  comparison?: HouseResult[];
   boardCount: number;
   questionCount: number;
   accusationMade: boolean;

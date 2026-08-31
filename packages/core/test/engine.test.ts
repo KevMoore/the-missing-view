@@ -5,6 +5,7 @@ import {
   applyMove,
   computeCounters,
   createGame,
+  excusePlayer,
   headlineStrength,
   type GameState,
 } from '../src/index.js';
@@ -119,29 +120,127 @@ describe('moves', () => {
   it('accusation only lands in act 3 and records correctness', () => {
     let g = started();
     expect(() =>
-      applyMove(
-        pack,
-        g,
-        { type: 'accuse', playerId: 'p1', culpritId: 's2', motive: 'Money' },
-        3000,
-      ),
+      applyMove(pack, g, { type: 'accuse-commit', playerId: 'p1', culpritId: 's2' }, 3000),
     ).toThrow(IllegalMove);
-    g = applyFacilitator(pack, g, { type: 'open-commitment' }, 3000);
-    g = applyFacilitator(pack, g, { type: 'next-act' }, 4000);
-    g = applyFacilitator(pack, g, { type: 'open-commitment' }, 5000);
-    g = applyFacilitator(pack, g, { type: 'next-act' }, 6000);
-    g = applyMove(
-      pack,
-      g,
-      { type: 'accuse', playerId: 'p1', culpritId: 's2', motive: 'Money' },
-      7000,
-    );
+    g = toActThree(g);
+    g = applyMove(pack, g, { type: 'set-motive', playerId: 'p1', text: 'Money' }, 6900);
+    g = commitAll(g, 's2', 7000);
     expect(g.accusation?.correct).toBe(true);
+    expect(g.accusation?.motive).toBe('Money');
     expect(() =>
-      applyMove(pack, g, { type: 'accuse', playerId: 'p2', culpritId: 's1', motive: 'x' }, 7100),
+      applyMove(pack, g, { type: 'accuse-commit', playerId: 'p2', culpritId: 's1' }, 7100),
+    ).toThrow(IllegalMove);
+  });
+
+  it('holds the accusation until the whole house agrees on one name', () => {
+    let g = toActThree(started());
+    // Four of five commit, and the fifth disagrees. No accusation either way:
+    // a majority is a vote, and a vote lets a team accuse over somebody's head.
+    for (const id of ['p1', 'p2', 'p3', 'p4'])
+      g = applyMove(pack, g, { type: 'accuse-commit', playerId: id, culpritId: 's2' }, 7000);
+    expect(g.accusation).toBeUndefined();
+    g = applyMove(pack, g, { type: 'accuse-commit', playerId: 'p5', culpritId: 's1' }, 7010);
+    expect(g.accusation).toBeUndefined();
+
+    // The holdout changing their mind is what makes the house accuse.
+    g = applyMove(pack, g, { type: 'accuse-commit', playerId: 'p5', culpritId: 's2' }, 7020);
+    expect(g.accusation?.culpritId).toBe('s2');
+    expect(g.accusation?.committedBy).toEqual(['p1', 'p2', 'p3', 'p4', 'p5']);
+  });
+
+  it('lets a player withdraw before the house is unanimous', () => {
+    let g = toActThree(started());
+    for (const id of ['p1', 'p2', 'p3', 'p4'])
+      g = applyMove(pack, g, { type: 'accuse-commit', playerId: id, culpritId: 's2' }, 7000);
+    g = applyMove(pack, g, { type: 'accuse-withdraw', playerId: 'p2' }, 7010);
+    expect(g.accusationVotes.p2).toBeUndefined();
+    g = applyMove(pack, g, { type: 'accuse-commit', playerId: 'p5', culpritId: 's2' }, 7020);
+    expect(g.accusation, 'a withdrawn commitment still counted').toBeUndefined();
+  });
+
+  it('does not wait on bots, which investigate but do not decide', () => {
+    const withBot = createGame(
+      pack,
+      [
+        { id: 'p1', name: 'A' },
+        { id: 'p2', name: 'B' },
+        { id: 'p3', name: 'C' },
+        { id: 'p4', name: 'D', bot: true },
+      ],
+      42,
+    );
+    let g = toActThree(applyFacilitator(pack, withBot, { type: 'start' }, 1000));
+    for (const id of ['p1', 'p2', 'p3'])
+      g = applyMove(pack, g, { type: 'accuse-commit', playerId: id, culpritId: 's2' }, 7000);
+    expect(g.accusation?.committedBy).toEqual(['p1', 'p2', 'p3']);
+  });
+
+  it('lets the house accuse without a player who has gone', () => {
+    let g = toActThree(started());
+    for (const id of ['p1', 'p2', 'p3', 'p4'])
+      g = applyMove(pack, g, { type: 'accuse-commit', playerId: id, culpritId: 's2' }, 7000);
+    expect(g.accusation, 'four of five is not the house').toBeUndefined();
+
+    // p5's phone has died. Unanimity counts everybody, so without this the
+    // house can never accuse — and the game records a room that never decided.
+    g = excusePlayer(pack, g, 'p5', true, 7100);
+    expect(g.accusation?.culpritId).toBe('s2');
+    expect(g.accusation?.committedBy, 'the absent player was credited').toEqual([
+      'p1',
+      'p2',
+      'p3',
+      'p4',
+    ]);
+  });
+
+  it('waits again for a player who is put back in the count', () => {
+    let g = toActThree(started());
+    g = excusePlayer(pack, g, 'p5', true, 7100);
+    g = excusePlayer(pack, g, 'p5', false, 7100);
+    for (const id of ['p1', 'p2', 'p3', 'p4'])
+      g = applyMove(pack, g, { type: 'accuse-commit', playerId: id, culpritId: 's2' }, 7000);
+    expect(g.accusation).toBeUndefined();
+  });
+
+  it('drops the half-made choice of a player it stops waiting for', () => {
+    let g = toActThree(started());
+    g = applyMove(pack, g, { type: 'accuse-commit', playerId: 'p5', culpritId: 's1' }, 7000);
+    g = excusePlayer(pack, g, 'p5', true, 7100);
+    expect(g.accusationVotes.p5, 'an absent player still voted').toBeUndefined();
+    for (const id of ['p1', 'p2', 'p3', 'p4'])
+      g = applyMove(pack, g, { type: 'accuse-commit', playerId: id, culpritId: 's2' }, 7010);
+    expect(g.accusation?.culpritId).toBe('s2');
+  });
+
+  it('will not excuse anybody once the house has accused', () => {
+    let g = toActThree(started());
+    g = commitAll(g, 's2', 7000);
+    expect(() => excusePlayer(pack, g, 'p5', true, 7100)).toThrow(IllegalMove);
+  });
+
+  it('refuses a name that is not a suspect', () => {
+    const g = toActThree(started());
+    expect(() =>
+      applyMove(pack, g, { type: 'accuse-commit', playerId: 'p1', culpritId: 'nobody' }, 7000),
     ).toThrow(IllegalMove);
   });
 });
+
+/** Run the clock forward to act 3, where an accusation is legal. */
+function toActThree(start: GameState): GameState {
+  let g = applyFacilitator(pack, start, { type: 'open-commitment' }, 3000);
+  g = applyFacilitator(pack, g, { type: 'next-act' }, 4000);
+  g = applyFacilitator(pack, g, { type: 'open-commitment' }, 5000);
+  return applyFacilitator(pack, g, { type: 'next-act' }, 6000);
+}
+
+/** Every human commits to the same name, which is what an accusation is. */
+function commitAll(start: GameState, culpritId: string, at: number): GameState {
+  let g = start;
+  for (const p of start.players.filter((x) => !x.bot))
+    g = applyMove(pack, g, { type: 'accuse-commit', playerId: p.id, culpritId }, at);
+  return g;
+}
 
 describe('reveal counters', () => {
   it('counts moves per player and finds the first key table', () => {
