@@ -1,6 +1,12 @@
 /** The facilitator console (D4): create, monitor, drive the acts, see team shape. */
 import { useEffect, useState } from 'react';
-import { remaining, useGameSocket, type ConsoleView, type ServerMessage } from '../ws.js';
+import {
+  remaining,
+  useGameSocket,
+  type CaseList,
+  type ConsoleView,
+  type ServerMessage,
+} from '../ws.js';
 
 export function Console() {
   const [view, setView] = useState<ConsoleView | null>(null);
@@ -8,6 +14,8 @@ export function Console() {
     sessionStorage.getItem('tmv-console-room'),
   );
   const [error, setError] = useState('');
+  const [cases, setCases] = useState<CaseList['cases']>([]);
+  const [chosen, setChosen] = useState('');
   const [now, setNow] = useState(Date.now());
   /**
    * The PRD's primary mode is online (§13) and the build is co-located (D1).
@@ -19,7 +27,10 @@ export function Console() {
 
   const { send, connected } = useGameSocket(
     (msg: ServerMessage) => {
-      if (msg.type === 'console-view') setView(msg);
+      if (msg.type === 'cases') {
+        setCases(msg.cases);
+        setChosen((c) => c || (msg.cases[0]?.id ?? ''));
+      } else if (msg.type === 'console-view') setView(msg);
       else if (msg.type === 'room-created') {
         sessionStorage.setItem('tmv-console-room', msg.roomCode);
         setRoomCode(msg.roomCode);
@@ -59,18 +70,43 @@ export function Console() {
         </h1>
         <div className="deco-frame">
           <div className="deco-rule">New game</div>
-          <p className="muted small mb">
-            Death at Blackwood Hall — 4 to 8 players, three acts, about an hour.
-          </p>
+          {/* One case is the common state and does not deserve a dropdown; more
+              than one and the facilitator has to be asked. */}
+          {cases.length > 1 ? (
+            <>
+              <p className="muted small mb">Which mystery?</p>
+              {cases.map((c) => (
+                <button
+                  key={c.id}
+                  className={chosen === c.id ? 'mb' : 'ghost mb'}
+                  style={{ width: '100%', textAlign: 'left' }}
+                  onClick={() => {
+                    setChosen(c.id);
+                  }}
+                >
+                  {c.title}
+                  <span className="muted small" style={{ display: 'block', lineHeight: 1.5 }}>
+                    {c.setting} · {c.players} players · about {c.minutes} minutes
+                  </span>
+                </button>
+              ))}
+            </>
+          ) : (
+            <p className="muted small mb">
+              {cases[0]
+                ? `${cases[0].title} — ${cases[0].players} players, three acts, about ${String(cases[0].minutes)} minutes.`
+                : 'Death at Blackwood Hall — 4 to 8 players, three acts, about an hour.'}
+            </p>
+          )}
           <p className="muted small mb" style={{ lineHeight: 1.7 }}>
             You need a big screen in the room — a TV, a projector, a laptop on the table — and one
             phone per player. This page is yours alone: you run the game, you do not play it.
           </p>
           <button
             style={{ width: '100%' }}
-            disabled={!connected}
+            disabled={!connected || (cases.length > 1 && !chosen)}
             onClick={() => {
-              send({ type: 'create-room', caseId: 'blackwood-hall' });
+              send({ type: 'create-room', caseId: chosen || 'blackwood-hall' });
             }}
           >
             Open the house

@@ -8,7 +8,7 @@ import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer, type WebSocket } from 'ws';
-import { blackwoodHall, IllegalMove, validateCase } from '@tmv/core';
+import { publishedCases, IllegalMove, validateCase, MIN_PLAYERS, MAX_PLAYERS } from '@tmv/core';
 import { Room, type Client } from './room.js';
 import type { ClientMessage, ServerMessage } from './protocol.js';
 import { dbConfigured, initDb, readInsights, saveDebrief, saveFinishedGame } from './persist.js';
@@ -19,7 +19,7 @@ const here = fileURLToPath(new URL('.', import.meta.url));
 const WEB_DIST = process.env.WEB_DIST ?? join(here, '../../web/dist');
 
 // Published cases only (D14); refuse to boot with an invalid case.
-const cases = new Map([[blackwoodHall.id, blackwoodHall]]);
+const cases = publishedCases();
 for (const pack of cases.values()) {
   const issues = validateCase(pack);
   if (issues.length) {
@@ -190,6 +190,19 @@ const socketRooms = new WeakMap<WebSocket, string>();
 
 wss.on('connection', (socket: WebSocket) => {
   alive.add(socket);
+  // Every connection is offered the menu; only the console has any use for it.
+  socket.send(
+    JSON.stringify({
+      type: 'cases',
+      cases: [...cases.values()].map((c) => ({
+        id: c.id,
+        title: c.title,
+        setting: c.setting,
+        players: `${String(MIN_PLAYERS)}–${String(MAX_PLAYERS)}`,
+        minutes: c.acts.reduce((n, a) => n + a.minutes, 0),
+      })),
+    }),
+  );
   socket.on('pong', () => alive.add(socket));
   let room: Room | null = null;
   let client: Client | null = null;

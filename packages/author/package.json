@@ -7,10 +7,11 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "author": "tsx src/cli.ts",
+    "author": "tsx --env-file-if-exists=../../.env src/cli.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "build": "tsc --noEmit"
+    "build": "tsc --noEmit",
+    "cases": "tsx src/cases-cli.ts"
   },
   "dependencies": {
     "@tmv/core": "workspace:*",

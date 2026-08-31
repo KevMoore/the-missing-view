@@ -1,11 +1,43 @@
 # Authoring a case
 
 ```bash
-OPENAI_API_KEY=... pnpm author --brief "a Cornish lighthouse, winter 1931"
+pnpm author --brief "a Cornish lighthouse, winter 1931"   # draft it
+pnpm case:list                                            # see what exists
+pnpm case:publish cornish-lighthouse                      # make it playable
+pnpm dev                                                  # play it
 ```
 
-Writes `packages/core/src/cases/<id>.ts`. It does **not** publish: registering the
-case in the server's `cases` map is a separate, deliberate act (D14).
+The key comes from a `.env` at the repository root, which is gitignored:
+
+```
+OPENAI_API_KEY=sk-...
+```
+
+`pnpm author` writes `packages/core/src/cases/<id>.ts` and an art sheet beside
+it. It does **not** publish. `pnpm case:publish` adds the case to
+`packages/core/src/cases/published.ts`, and refuses if it does not validate —
+but nothing checks that you read it, and nothing can (D14).
+
+Once more than one case is published the facilitator console asks which mystery
+to run. With one it just says which.
+
+## What is generated, and what is not
+
+|                                                                             |                                                            |
+| --------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| The mystery — cast, clues, knowledge sheets, banked answers, acts, solution | **generated**                                              |
+| The narrated opening — eight beats of script                                | **generated**                                              |
+| Suspect voices and the narrator's voice                                     | **generated at play time**, from the case                  |
+| Suspect portraits                                                           | **prompts generated**, images are one Autosprite call each |
+| Scenes and music                                                            | **reused from the theme** — nothing to make                |
+
+A case drafted into the existing `deco-1920s` theme inherits its thirteen
+painted scenes, its music and its twenty player roles, and the opening is
+already wired to those scenes. The only art it needs is a face per suspect, and
+the art sheet beside the case has the prompts ready.
+
+A brief that leaves the 1920s country house needs a new theme — a folder of
+scenes and music — before it will look like anything. See `art-and-music.md`.
 
 ## Why this can be trusted
 

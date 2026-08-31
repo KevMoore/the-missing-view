@@ -189,7 +189,14 @@ export interface TeamShapeReveal {
   }[];
 }
 
+/** Sent to a console the moment it connects, so it can offer a choice. */
+export interface CaseList {
+  type: 'cases';
+  cases: { id: string; title: string; setting: string; players: string; minutes: number }[];
+}
+
 export type ServerMessage =
+  | CaseList
   | ScreenView
   | PhoneView
   | ConsoleView
